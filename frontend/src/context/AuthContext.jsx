@@ -22,13 +22,13 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (userId, password) => {
     try {
-      console.log("Attempting login with:", email);
+      console.log("Attempting login with:", userId);
       const response = await axios.post(
         "http://localhost:5000/api/auth/login",
         {
-          email,
+          userId,
           password,
         }
       );

@@ -8,8 +8,9 @@ import {
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
-import StudentDashboard from "./components/dashboard/StudentDashboard";
-import DoctorDashboard from "./components/dashboard/DoctorDashboard";
+import Dashboard from "./components/dashboard/Dashboard";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -30,19 +31,6 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Role-based route component
-const RoleBasedRoute = () => {
-  const { user } = useAuth();
-
-  if (user?.role === "student") {
-    return <StudentDashboard />;
-  } else if (user?.role === "doctor") {
-    return <DoctorDashboard />;
-  }
-
-  return <Navigate to="/login" />;
-};
-
 function App() {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -52,16 +40,28 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route
-              path="/dashboard"
+              path="/*"
               element={
                 <ProtectedRoute>
-                  <RoleBasedRoute />
+                  <Dashboard />
                 </ProtectedRoute>
               }
             />
             <Route path="/" element={<Navigate to="/login" />} />
           </Routes>
         </Router>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
       </AuthProvider>
     </div>
   );
