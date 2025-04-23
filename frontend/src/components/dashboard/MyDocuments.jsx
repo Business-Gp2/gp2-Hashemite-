@@ -16,13 +16,10 @@ const MyDocuments = () => {
 
   const fetchDocuments = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/documents`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await axios.get(`${API_URL}/api/documents`);
       setDocuments(response.data.documents);
     } catch (error) {
+      console.error("Error fetching documents:", error);
       toast.error("Failed to fetch documents");
     } finally {
       setLoading(false);

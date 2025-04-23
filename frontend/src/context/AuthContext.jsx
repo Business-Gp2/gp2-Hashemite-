@@ -8,6 +8,17 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Set up axios interceptor for token
+  useEffect(() => {
+    const token = Cookies.get("token");
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    }
+    return () => {
+      delete axios.defaults.headers.common["Authorization"];
+    };
+  }, []);
+
   useEffect(() => {
     const storedUser = Cookies.get("user");
     const storedToken = Cookies.get("token");
@@ -16,10 +27,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        // Set the token in axios headers
-        axios.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${storedToken}`;
         console.log("Stored user and token found:", parsedUser);
       } catch (error) {
         console.error("Error parsing stored user:", error);
@@ -44,7 +51,7 @@ export const AuthProvider = ({ children }) => {
       const userData = response.data;
       console.log("Login successful, user data:", userData);
 
-      // Store user data and token in cookies with longer expiration
+      // Store user data and token in cookies
       Cookies.set("token", userData.token, { expires: 30 }); // 30 days
       Cookies.set("user", JSON.stringify(userData), { expires: 30 });
 
@@ -72,7 +79,7 @@ export const AuthProvider = ({ children }) => {
       const newUser = response.data;
       console.log("Registration successful, user data:", newUser);
 
-      // Store user data and token in cookies with longer expiration
+      // Store user data and token in cookies
       Cookies.set("token", newUser.token, { expires: 30 }); // 30 days
       Cookies.set("user", JSON.stringify(newUser), { expires: 30 });
 

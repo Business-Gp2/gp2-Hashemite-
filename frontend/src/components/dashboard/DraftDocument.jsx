@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
-import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
-const API_URL = 'http://localhost:5000';
+const API_URL = "http://localhost:5000";
 
 const DraftDocument = () => {
   const [drafts, setDrafts] = useState([]);
@@ -20,14 +20,11 @@ const DraftDocument = () => {
 
   const fetchDrafts = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/documents/drafts`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await axios.get(`${API_URL}/api/documents/drafts`);
       setDrafts(response.data.documents);
     } catch (error) {
-      toast.error('Failed to fetch draft documents');
+      console.error("Error fetching drafts:", error);
+      toast.error("Failed to fetch draft documents");
     } finally {
       setLoading(false);
     }
@@ -35,10 +32,10 @@ const DraftDocument = () => {
 
   const handleView = (document) => {
     if (!document.file) {
-      toast.error('No file available for this document');
+      toast.error("No file available for this document");
       return;
     }
-    
+
     // Cloudinary URL is already a direct URL to the file
     setSelectedDocument(document);
     setShowModal(true);
@@ -50,36 +47,30 @@ const DraftDocument = () => {
   };
 
   const handleEdit = (document) => {
-    navigate('/upload-document', { state: { document } });
+    navigate("/upload-document", { state: { document } });
   };
 
   const handleDelete = async (documentId) => {
-    if (window.confirm('Are you sure you want to delete this draft?')) {
+    if (window.confirm("Are you sure you want to delete this draft?")) {
       try {
-        await axios.delete(`${API_URL}/api/documents/${documentId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        toast.success('Draft deleted successfully');
+        await axios.delete(`${API_URL}/api/documents/${documentId}`);
+        toast.success("Draft deleted successfully");
         fetchDrafts();
       } catch (error) {
-        toast.error('Failed to delete draft');
+        console.error("Error deleting draft:", error);
+        toast.error("Failed to delete draft");
       }
     }
   };
 
   const handleSubmit = async (documentId) => {
     try {
-      await axios.put(`${API_URL}/api/documents/submit/${documentId}`, {}, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      toast.success('Document submitted successfully');
+      await axios.put(`${API_URL}/api/documents/submit/${documentId}`);
+      toast.success("Document submitted successfully");
       fetchDrafts();
     } catch (error) {
-      toast.error('Failed to submit document');
+      console.error("Error submitting draft:", error);
+      toast.error("Failed to submit document");
     }
   };
 
@@ -109,31 +100,33 @@ const DraftDocument = () => {
                   <div className="mt-2 text-sm text-gray-500">
                     <p>Type: {doc.type}</p>
                     <p>Course: {doc.course}</p>
-                    <p>Created: {new Date(doc.createdAt).toLocaleDateString()}</p>
+                    <p>
+                      Created: {new Date(doc.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleView(doc)}
-                    className="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                    className="text-blue-500 hover:text-blue-700"
                   >
                     View
                   </button>
                   <button
                     onClick={() => handleEdit(doc)}
-                    className="px-3 py-1 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200"
+                    className="text-green-500 hover:text-green-700"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(doc._id)}
-                    className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                    className="text-red-500 hover:text-red-700"
                   >
                     Delete
                   </button>
                   <button
                     onClick={() => handleSubmit(doc._id)}
-                    className="px-3 py-1 bg-green-100 text-green-600 rounded hover:bg-green-200"
+                    className="text-purple-500 hover:text-purple-700"
                   >
                     Submit
                   </button>
@@ -150,15 +143,29 @@ const DraftDocument = () => {
           <div className="bg-white rounded-lg w-4/5 h-4/5 flex flex-col">
             <div className="flex justify-between items-center p-4 border-b">
               <div>
-                <h2 className="text-xl font-semibold">{selectedDocument.title}</h2>
-                <p className="text-gray-600">Course: {selectedDocument.course}</p>
+                <h2 className="text-xl font-semibold">
+                  {selectedDocument.title}
+                </h2>
+                <p className="text-gray-600">
+                  Course: {selectedDocument.course}
+                </p>
               </div>
               <button
                 onClick={handleCloseModal}
                 className="text-gray-500 hover:text-gray-700"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -166,15 +173,40 @@ const DraftDocument = () => {
               <div className="w-1/3 p-4 border-r">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="font-semibold text-gray-700">Document Details</h3>
+                    <h3 className="font-semibold text-gray-700">
+                      Document Details
+                    </h3>
                     <div className="mt-2 space-y-2">
-                      <p><span className="font-medium">Title:</span> {selectedDocument.title}</p>
-                      <p><span className="font-medium">Type:</span> {selectedDocument.type}</p>
-                      <p><span className="font-medium">Course:</span> {selectedDocument.course}</p>
-                      <p><span className="font-medium">Description:</span> {selectedDocument.description}</p>
-                      <p><span className="font-medium">Status:</span> {selectedDocument.status}</p>
-                      <p><span className="font-medium">Created:</span> {new Date(selectedDocument.createdAt).toLocaleDateString()}</p>
-                      <p><span className="font-medium">File Path:</span> {selectedDocument.file}</p>
+                      <p>
+                        <span className="font-medium">Title:</span>{" "}
+                        {selectedDocument.title}
+                      </p>
+                      <p>
+                        <span className="font-medium">Type:</span>{" "}
+                        {selectedDocument.type}
+                      </p>
+                      <p>
+                        <span className="font-medium">Course:</span>{" "}
+                        {selectedDocument.course}
+                      </p>
+                      <p>
+                        <span className="font-medium">Description:</span>{" "}
+                        {selectedDocument.description}
+                      </p>
+                      <p>
+                        <span className="font-medium">Status:</span>{" "}
+                        {selectedDocument.status}
+                      </p>
+                      <p>
+                        <span className="font-medium">Created:</span>{" "}
+                        {new Date(
+                          selectedDocument.createdAt
+                        ).toLocaleDateString()}
+                      </p>
+                      <p>
+                        <span className="font-medium">File Path:</span>{" "}
+                        {selectedDocument.file}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -183,7 +215,7 @@ const DraftDocument = () => {
                 {selectedDocument.file ? (
                   <div className="h-full flex flex-col">
                     <div className="mb-2">
-                      <a 
+                      <a
                         href={`${API_URL}${selectedDocument.file}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -197,8 +229,10 @@ const DraftDocument = () => {
                       className="flex-1 w-full"
                       title="PDF Viewer"
                       onError={(e) => {
-                        console.error('Error loading PDF:', e);
-                        toast.error('Failed to load PDF. Please try opening in a new tab.');
+                        console.error("Error loading PDF:", e);
+                        toast.error(
+                          "Failed to load PDF. Please try opening in a new tab."
+                        );
                       }}
                     />
                   </div>
@@ -216,4 +250,4 @@ const DraftDocument = () => {
   );
 };
 
-export default DraftDocument; 
+export default DraftDocument;
