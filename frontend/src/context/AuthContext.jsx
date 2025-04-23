@@ -10,13 +10,22 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const storedUser = Cookies.get("user");
-    if (storedUser) {
+    const storedToken = Cookies.get("token");
+
+    if (storedUser && storedToken) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        console.log("Stored user found:", parsedUser);
+        // Set the token in axios headers
+        axios.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${storedToken}`;
+        console.log("Stored user and token found:", parsedUser);
       } catch (error) {
         console.error("Error parsing stored user:", error);
+        // Clear invalid data
+        Cookies.remove("user");
+        Cookies.remove("token");
       }
     }
     setLoading(false);
@@ -35,9 +44,14 @@ export const AuthProvider = ({ children }) => {
       const userData = response.data;
       console.log("Login successful, user data:", userData);
 
-      // Store user data and token in cookies
-      Cookies.set("token", userData.token, { expires: 7 });
-      Cookies.set("user", JSON.stringify(userData), { expires: 7 });
+      // Store user data and token in cookies with longer expiration
+      Cookies.set("token", userData.token, { expires: 30 }); // 30 days
+      Cookies.set("user", JSON.stringify(userData), { expires: 30 });
+
+      // Set the token in axios headers
+      axios.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${userData.token}`;
 
       // Update state
       setUser(userData);
@@ -58,9 +72,14 @@ export const AuthProvider = ({ children }) => {
       const newUser = response.data;
       console.log("Registration successful, user data:", newUser);
 
-      // Store user data and token in cookies
-      Cookies.set("token", newUser.token, { expires: 7 });
-      Cookies.set("user", JSON.stringify(newUser), { expires: 7 });
+      // Store user data and token in cookies with longer expiration
+      Cookies.set("token", newUser.token, { expires: 30 }); // 30 days
+      Cookies.set("user", JSON.stringify(newUser), { expires: 30 });
+
+      // Set the token in axios headers
+      axios.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${newUser.token}`;
 
       // Update state
       setUser(newUser);
@@ -75,22 +94,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear cookies
     Cookies.remove("token");
     Cookies.remove("user");
+    // Clear axios headers
+    delete axios.defaults.headers.common["Authorization"];
+    // Clear state
     setUser(null);
     console.log("User logged out");
   };
-
-  // Add axios interceptor to include token in requests
-  useEffect(() => {
-    const token = Cookies.get("token");
-    if (token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    }
-    return () => {
-      delete axios.defaults.headers.common["Authorization"];
-    };
-  }, []);
 
   const value = {
     user,
