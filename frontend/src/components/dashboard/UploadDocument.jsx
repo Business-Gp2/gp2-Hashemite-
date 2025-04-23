@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
-import { toast } from 'react-toastify';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { PDFDocument } from 'pdf-lib';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { useLocation, useNavigate } from "react-router-dom";
+import { PDFDocument } from "pdf-lib";
 
 // Backend API URL configuration
-const API_URL = 'http://localhost:5000'; // Update this to match your backend URL
+const API_URL = "http://localhost:5000"; // Update this to match your backend URL
 
 const UploadDocument = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    title: '',
-    type: 'homework',
-    description: '',
-    course: '',
-    file: null
+    title: "",
+    type: "homework",
+    description: "",
+    course: "",
+    file: null,
   });
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -34,16 +34,16 @@ const UploadDocument = () => {
         type: document.type,
         description: document.description,
         course: document.course,
-        file: null // We'll keep the existing file unless changed
+        file: null, // We'll keep the existing file unless changed
       });
     }
   }, [location.state]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -54,24 +54,36 @@ const UploadDocument = () => {
       const { width, height } = page.getSize();
 
       // Add file information
-      page.drawText(`File Information:\nName: ${file.name}\nType: ${file.type}\nSize: ${(file.size / 1024).toFixed(2)} KB`, {
-        x: 50,
-        y: height - 50,
-        size: 12,
-      });
+      page.drawText(
+        `File Information:\nName: ${file.name}\nType: ${file.type}\nSize: ${(
+          file.size / 1024
+        ).toFixed(2)} KB`,
+        {
+          x: 50,
+          y: height - 50,
+          size: 12,
+        }
+      );
 
       // Handle different file types
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith("image/")) {
         // For images, we'll just add the file info since we can't easily embed images
-        page.drawText('\n\nThis is an image file. The original image is preserved in the upload.', {
-          x: 50,
-          y: height - 100,
-          size: 12,
-        });
-      } else if (file.type === 'application/pdf') {
+        page.drawText(
+          "\n\nThis is an image file. The original image is preserved in the upload.",
+          {
+            x: 50,
+            y: height - 100,
+            size: 12,
+          }
+        );
+      } else if (file.type === "application/pdf") {
         // If it's already a PDF, return it as is
         return file;
-      } else if (file.type.startsWith('text/') || file.type.includes('word') || file.type.includes('excel')) {
+      } else if (
+        file.type.startsWith("text/") ||
+        file.type.includes("word") ||
+        file.type.includes("excel")
+      ) {
         // For text-based files, try to read the content
         try {
           const text = await file.text();
@@ -81,27 +93,35 @@ const UploadDocument = () => {
             size: 12,
           });
         } catch (error) {
-          page.drawText('\n\nUnable to extract text content from this file type.', {
-            x: 50,
-            y: height - 100,
-            size: 12,
-          });
+          page.drawText(
+            "\n\nUnable to extract text content from this file type.",
+            {
+              x: 50,
+              y: height - 100,
+              size: 12,
+            }
+          );
         }
       } else {
         // For other file types
-        page.drawText('\n\nThis file type cannot be directly converted to PDF. The original file is preserved in the upload.', {
-          x: 50,
-          y: height - 100,
-          size: 12,
-        });
+        page.drawText(
+          "\n\nThis file type cannot be directly converted to PDF. The original file is preserved in the upload.",
+          {
+            x: 50,
+            y: height - 100,
+            size: 12,
+          }
+        );
       }
 
       // Save the PDF
       const pdfBytes = await pdfDoc.save();
-      return new File([pdfBytes], `${file.name}.pdf`, { type: 'application/pdf' });
+      return new File([pdfBytes], `${file.name}.pdf`, {
+        type: "application/pdf",
+      });
     } catch (error) {
-      console.error('Error converting to PDF:', error);
-      throw new Error('Failed to convert file to PDF');
+      console.error("Error converting to PDF:", error);
+      throw new Error("Failed to convert file to PDF");
     }
   };
 
@@ -110,20 +130,20 @@ const UploadDocument = () => {
     if (file) {
       // Check file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size should be less than 5MB');
+        toast.error("File size should be less than 5MB");
         return;
       }
-      
+
       try {
         // Convert the file to PDF
         const pdfFile = await convertToPDF(file);
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          file: pdfFile
+          file: pdfFile,
         }));
-        toast.success('File processed successfully');
+        toast.success("File processed successfully");
       } catch (error) {
-        toast.error('Failed to process file');
+        toast.error("Failed to process file");
       }
     }
   };
@@ -134,84 +154,87 @@ const UploadDocument = () => {
 
     try {
       // Validate form data
-      if (!formData.title || !formData.type || !formData.description || !formData.course) {
-        toast.error('Please fill in all required fields');
+      if (
+        !formData.title ||
+        !formData.type ||
+        !formData.description ||
+        !formData.course
+      ) {
+        toast.error("Please fill in all required fields");
         setLoading(false);
         return;
       }
 
       if (!formData.file && !isEditing) {
-        toast.error('Please select a file to upload');
+        toast.error("Please select a file to upload");
         setLoading(false);
         return;
       }
 
       const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('type', formData.type);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('course', formData.course);
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("type", formData.type);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("course", formData.course);
       if (formData.file) {
-        formDataToSend.append('file', formData.file);
-      }
-
-      // Get the auth token
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Authentication token not found. Please log in again.');
-        setLoading(false);
-        return;
+        formDataToSend.append("file", formData.file);
       }
 
       let response;
       if (isEditing) {
         // Update existing document
-        response = await axios.put(`${API_URL}/api/documents/draft/${documentId}`, formDataToSend, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`
+        response = await axios.put(
+          `${API_URL}/api/documents/draft/${documentId}`,
+          formDataToSend,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
           }
-        });
+        );
       } else {
         // Create new document
-        const endpoint = isDraft ? `${API_URL}/api/documents/draft` : `${API_URL}/api/documents/upload`;
+        const endpoint = isDraft
+          ? `${API_URL}/api/documents/draft`
+          : `${API_URL}/api/documents/upload`;
         response = await axios.post(endpoint, formDataToSend, {
           headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`
-          }
+            "Content-Type": "multipart/form-data",
+          },
         });
       }
 
       toast.success(response.data.message);
       // Reset form
       setFormData({
-        title: '',
-        type: 'homework',
-        description: '',
-        course: '',
-        file: null
+        title: "",
+        type: "homework",
+        description: "",
+        course: "",
+        file: null,
       });
-      document.getElementById('fileInput').value = '';
-      
+      document.getElementById("fileInput").value = "";
+
       // Navigate back to drafts page if editing
       if (isEditing) {
-        navigate('/draft-document');
+        navigate("/draft-document");
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      if (error.code === 'ERR_NETWORK') {
-        toast.error('Cannot connect to the server. Please make sure the backend server is running.');
+      console.error("Upload error:", error);
+      if (error.code === "ERR_NETWORK") {
+        toast.error(
+          "Cannot connect to the server. Please make sure the backend server is running."
+        );
       } else if (error.response) {
         // The request was made and the server responded with a status code
         // that falls out of the range of 2xx
-        toast.error(error.response.data.message || 'Failed to upload document');
+        toast.error(error.response.data.message || "Failed to upload document");
       } else if (error.request) {
         // The request was made but no response was received
-        toast.error('No response from server. Please try again.');
+        toast.error("No response from server. Please try again.");
       } else {
         // Something happened in setting up the request that triggered an Error
-        toast.error('An error occurred while uploading the document');
+        toast.error("An error occurred while uploading the document");
       }
     } finally {
       setLoading(false);
@@ -221,7 +244,7 @@ const UploadDocument = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">
-        {isEditing ? 'Edit Draft Document' : 'Upload Document'}
+        {isEditing ? "Edit Draft Document" : "Upload Document"}
       </h1>
       <div className="bg-white shadow rounded-lg p-6">
         <form className="space-y-4">
@@ -302,7 +325,8 @@ const UploadDocument = () => {
               required={!isEditing}
             />
             <p className="mt-1 text-sm text-gray-500">
-              Maximum file size: 5MB. File will be processed and converted to PDF format.
+              Maximum file size: 5MB. File will be processed and converted to
+              PDF format.
             </p>
           </div>
 
@@ -314,7 +338,7 @@ const UploadDocument = () => {
                 disabled={loading}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Save as Draft'}
+                {loading ? "Saving..." : "Save as Draft"}
               </button>
             )}
             <button
@@ -323,7 +347,13 @@ const UploadDocument = () => {
               disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              {loading ? (isEditing ? 'Updating...' : 'Uploading...') : (isEditing ? 'Update' : 'Upload')}
+              {loading
+                ? isEditing
+                  ? "Updating..."
+                  : "Uploading..."
+                : isEditing
+                ? "Update"
+                : "Upload"}
             </button>
           </div>
         </form>
@@ -332,4 +362,4 @@ const UploadDocument = () => {
   );
 };
 
-export default UploadDocument; 
+export default UploadDocument;
