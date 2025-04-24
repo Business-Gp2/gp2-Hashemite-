@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
 const API_URL = "http://localhost:5000";
 
@@ -9,6 +11,7 @@ const MyDocuments = () => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchDocuments();
@@ -16,10 +19,23 @@ const MyDocuments = () => {
 
   const fetchDocuments = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/documents`);
+      const token = Cookies.get('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await axios.get(`${API_URL}/api/documents`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       setDocuments(response.data.documents);
     } catch (error) {
       console.error("Error fetching documents:", error);
+      if (error.response?.status === 401) {
+        navigate('/login');
+      }
       toast.error("Failed to fetch documents");
     } finally {
       setLoading(false);

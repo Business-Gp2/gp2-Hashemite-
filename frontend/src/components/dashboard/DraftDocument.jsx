@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
 const API_URL = "http://localhost:5000";
 
@@ -20,10 +21,23 @@ const DraftDocument = () => {
 
   const fetchDrafts = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/documents/drafts`);
+      const token = Cookies.get('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await axios.get(`${API_URL}/api/documents/drafts`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       setDrafts(response.data.documents);
     } catch (error) {
       console.error("Error fetching drafts:", error);
+      if (error.response?.status === 401) {
+        navigate('/login');
+      }
       toast.error("Failed to fetch draft documents");
     } finally {
       setLoading(false);
@@ -53,7 +67,17 @@ const DraftDocument = () => {
   const handleDelete = async (documentId) => {
     if (window.confirm("Are you sure you want to delete this draft?")) {
       try {
-        await axios.delete(`${API_URL}/api/documents/${documentId}`);
+        const token = Cookies.get('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        await axios.delete(`${API_URL}/api/documents/${documentId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         toast.success("Draft deleted successfully");
         fetchDrafts();
       } catch (error) {
@@ -65,7 +89,17 @@ const DraftDocument = () => {
 
   const handleSubmit = async (documentId) => {
     try {
-      await axios.put(`${API_URL}/api/documents/submit/${documentId}`);
+      const token = Cookies.get('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      await axios.put(`${API_URL}/api/documents/submit/${documentId}`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       toast.success("Document submitted successfully");
       fetchDrafts();
     } catch (error) {
