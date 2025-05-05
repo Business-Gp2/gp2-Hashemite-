@@ -4,16 +4,16 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
-import { 
-  CheckCircle, 
-  Clock, 
-  FileText, 
-  ExternalLink, 
-  CalendarDays, 
+import {
+  CheckCircle,
+  Clock,
+  FileText,
+  ExternalLink,
+  CalendarDays,
   Search,
   Bookmark,
   BookOpen,
-  X
+  X,
 } from "lucide-react";
 
 const API_URL = "http://localhost:5000";
@@ -34,28 +34,31 @@ const MyDocuments = () => {
 
   const fetchDocuments = async () => {
     try {
-      const token = Cookies.get('token');
+      const token = Cookies.get("token");
       if (!token) {
-        navigate('/login');
+        navigate("/login");
         return;
       }
 
       const response = await axios.get(`${API_URL}/api/documents`, {
         headers: {
-          Authorization: `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
-      
-      // Filter out draft documents and only keep approved and submitted
+
+      // Include rejected documents in the filtered list
       const filteredDocuments = response.data.documents.filter(
-        doc => doc.status === 'approved' || doc.status === 'submitted'
+        (doc) =>
+          doc.status === "approved" ||
+          doc.status === "submitted" ||
+          doc.status === "rejected"
       );
-      
+
       setDocuments(filteredDocuments);
     } catch (error) {
       console.error("Error fetching documents:", error);
       if (error.response?.status === 401) {
-        navigate('/login');
+        navigate("/login");
       }
       toast.error("Failed to fetch documents");
     } finally {
@@ -65,13 +68,14 @@ const MyDocuments = () => {
 
   // Filter documents based on filter and search
   const filteredDocuments = documents
-    .filter(doc => filter === "all" || doc.status === filter)
-    .filter(doc => 
-      searchQuery === "" || 
-      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.course.toLowerCase().includes(searchQuery.toLowerCase())
+    .filter((doc) => filter === "all" || doc.status === filter)
+    .filter(
+      (doc) =>
+        searchQuery === "" ||
+        doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.course.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
   if (loading) {
@@ -111,7 +115,7 @@ const MyDocuments = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
-                <button 
+                <button
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setSearchQuery("")}
                 >
@@ -146,7 +150,7 @@ const MyDocuments = () => {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                Approved 
+                Approved
               </button>
               <button
                 onClick={() => setFilter("submitted")}
@@ -158,6 +162,16 @@ const MyDocuments = () => {
               >
                 Pending Review
               </button>
+              <button
+                onClick={() => setFilter("rejected")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  filter === "rejected"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Rejected
+              </button>
             </nav>
           </div>
         </div>
@@ -165,7 +179,8 @@ const MyDocuments = () => {
         {/* Results summary */}
         <div className="mb-6">
           <p className="text-sm text-gray-500">
-            {filteredDocuments.length} {filteredDocuments.length === 1 ? 'document' : 'documents'} found
+            {filteredDocuments.length}{" "}
+            {filteredDocuments.length === 1 ? "document" : "documents"} found
             {filter !== "all" && ` with status: ${filter}`}
             {searchQuery && ` matching "${searchQuery}"`}
           </p>
@@ -177,15 +192,15 @@ const MyDocuments = () => {
             <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <FileText className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">No documents found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">
+              No documents found
+            </h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              {searchQuery ? (
-                "No documents match your search criteria. Try adjusting your filters or search terms."
-              ) : filter !== "all" ? (
-                `You don't have any ${filter} documents yet.`
-              ) : (
-                "You don't have any documents yet. Once you submit documents, they'll appear here."
-              )}
+              {searchQuery
+                ? "No documents match your search criteria. Try adjusting your filters or search terms."
+                : filter !== "all"
+                ? `You don't have any ${filter} documents yet.`
+                : "You don't have any documents yet. Once you submit documents, they'll appear here."}
             </p>
           </div>
         )}
@@ -193,18 +208,23 @@ const MyDocuments = () => {
         {/* Documents list */}
         <div className="space-y-4">
           {filteredDocuments.map((doc) => (
-            <div 
-              key={doc._id} 
+            <div
+              key={doc._id}
               className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="px-6 py-5">
                 {/* Top row with status and date */}
                 <div className="flex justify-between items-center mb-4">
                   <div>
-                    {doc.status === 'approved' ? (
+                    {doc.status === "approved" ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         <CheckCircle className="w-3 h-3 mr-1" />
                         Approved
+                      </span>
+                    ) : doc.status === "rejected" ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <X className="w-3 h-3 mr-1" />
+                        Rejected
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -215,20 +235,24 @@ const MyDocuments = () => {
                   </div>
                   <div className="text-sm text-gray-500 flex items-center">
                     <CalendarDays className="w-4 h-4 mr-1" />
-                    {new Date(doc.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
+                    {new Date(doc.createdAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
                     })}
                   </div>
                 </div>
-                
+
                 {/* Content area */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-semibold text-gray-900 truncate">{doc.title}</h2>
-                    <p className="mt-1 text-gray-600 line-clamp-2">{doc.description}</p>
-                    
+                    <h2 className="text-lg font-semibold text-gray-900 truncate">
+                      {doc.title}
+                    </h2>
+                    <p className="mt-1 text-gray-600 line-clamp-2">
+                      {doc.description}
+                    </p>
+
                     <div className="mt-3 flex items-center text-sm text-gray-500 space-x-4">
                       <div className="flex items-center">
                         <Bookmark className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
@@ -240,10 +264,10 @@ const MyDocuments = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   {doc.file && (
                     <div className="mt-4 md:mt-0 md:ml-4">
-                      {doc.file.toLowerCase().endsWith('.pdf') ? (
+                      {doc.file.toLowerCase().endsWith(".pdf") ? (
                         <a
                           href={`${API_URL}${doc.file}`}
                           download
@@ -324,7 +348,9 @@ const MyDocuments = () => {
                   {selectedDocument.title}
                 </h3>
                 <p className="text-sm text-gray-500 mb-4">
-                  {selectedDocument.file.toLowerCase().endsWith('.pdf') ? 'PDF Document' : 'Image File'}
+                  {selectedDocument.file.toLowerCase().endsWith(".pdf")
+                    ? "PDF Document"
+                    : "Image File"}
                 </p>
                 <a
                   href={`${API_URL}${selectedDocument.file}`}
@@ -363,9 +389,7 @@ const MyDocuments = () => {
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                 />
               </svg>
-              <p className="text-gray-600 mb-2">
-                No document file available
-              </p>
+              <p className="text-gray-600 mb-2">No document file available</p>
             </div>
           )}
         </div>

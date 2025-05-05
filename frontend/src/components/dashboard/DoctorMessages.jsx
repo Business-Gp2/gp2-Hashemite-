@@ -5,14 +5,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 import DoctorLayout from "./DoctorLayout";
-import {
-  MessageSquare,
-  Send,
-  Search,
-  Clock,
-  User,
-  Trash2,
-} from "lucide-react";
+import { MessageSquare, Send, Search, Clock, User, Trash2 } from "lucide-react";
 
 const API_URL = "http://localhost:5000";
 
@@ -85,7 +78,8 @@ const DoctorMessages = () => {
   };
 
   const handleDeleteMessage = async (messageId) => {
-    if (!window.confirm("Are you sure you want to delete this message?")) return;
+    if (!window.confirm("Are you sure you want to delete this message?"))
+      return;
 
     try {
       const token = Cookies.get("token");
@@ -132,9 +126,7 @@ const DoctorMessages = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-          <p className="mt-2 text-gray-600">
-            Communicate with your students
-          </p>
+          <p className="mt-2 text-gray-600">Communicate with your students</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -158,7 +150,9 @@ const DoctorMessages = () => {
               {filteredMessages.length === 0 ? (
                 <div className="text-center py-12">
                   <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No messages</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">
+                    No messages
+                  </h3>
                   <p className="mt-1 text-sm text-gray-500">
                     No messages found.
                   </p>
@@ -239,7 +233,9 @@ const DoctorMessages = () => {
                       <div
                         key={index}
                         className={`flex ${
-                          msg.sender === "doctor" ? "justify-end" : "justify-start"
+                          msg.sender === "doctor"
+                            ? "justify-end"
+                            : "justify-start"
                         }`}
                       >
                         <div
@@ -300,4 +296,4 @@ const DoctorMessages = () => {
   );
 };
 
-export default DoctorMessages; 
+export default DoctorMessages;

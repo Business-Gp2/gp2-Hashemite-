@@ -26,23 +26,24 @@ const UploadDocument = () => {
   const [documentId, setDocumentId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
-      'application/pdf': ['.pdf'],
-      'image/*': ['.png', '.jpg', '.jpeg']
+      "application/pdf": [".pdf"],
+      "image/*": [".png", ".jpg", ".jpeg"],
     },
     maxSize: 5 * 1024 * 1024, // 5MB
     multiple: false,
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
         setSelectedFile(acceptedFiles[0]);
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          file: acceptedFiles[0]
+          file: acceptedFiles[0],
         }));
       }
-    }
+    },
   });
 
   useEffect(() => {
@@ -70,13 +71,10 @@ const UploadDocument = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedFile) {
-      toast.error("Please select a file to upload");
-      return;
-    }
+    setLoading(true);
+    setError(null);
 
     try {
-      setSubmitting(true);
       const token = Cookies.get("token");
       if (!token) {
         navigate("/login");
@@ -88,7 +86,9 @@ const UploadDocument = () => {
       formDataToSend.append("type", formData.type);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("course", formData.course);
-      formDataToSend.append("file", selectedFile);
+      if (selectedFile) {
+        formDataToSend.append("file", selectedFile);
+      }
 
       const response = await axios.post(
         `${API_URL}/api/documents`,
@@ -101,13 +101,16 @@ const UploadDocument = () => {
         }
       );
 
-      toast.success("Document uploaded successfully");
-      navigate("/my-documents");
+      if (response.data.success) {
+        toast.success("Document uploaded successfully");
+        navigate("/dashboard");
+      }
     } catch (error) {
       console.error("Error uploading document:", error);
+      setError(error.response?.data?.message || "Failed to upload document");
       toast.error(error.response?.data?.message || "Failed to upload document");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -238,10 +241,16 @@ const UploadDocument = () => {
                     required
                   >
                     <option value="">Select a course</option>
-                    <option value="CS101">CS101 - Introduction to Computer Science</option>
-                    <option value="MATH201">MATH201 - Advanced Mathematics</option>
+                    <option value="CS101">
+                      CS101 - Introduction to Computer Science
+                    </option>
+                    <option value="MATH201">
+                      MATH201 - Advanced Mathematics
+                    </option>
                     <option value="ENG105">ENG105 - English Composition</option>
-                    <option value="WEB ADVANCE">WEB ADVANCE - Advanced Web Development</option>
+                    <option value="WEB ADVANCE">
+                      WEB ADVANCE - Advanced Web Development
+                    </option>
                   </select>
                 </div>
               </div>

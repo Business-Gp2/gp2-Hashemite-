@@ -118,13 +118,14 @@ const DoctorAllDocuments = () => {
   };
 
   const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch =
+      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.course.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesType = filter === "all" || doc.type === filter;
     const matchesStatus = statusFilter === "all" || doc.status === statusFilter;
-    
+
     return matchesSearch && matchesType && matchesStatus;
   });
 
@@ -207,7 +208,9 @@ const DoctorAllDocuments = () => {
           {filteredDocuments.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No documents</h3>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                No documents
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
                 No documents match your search criteria.
               </p>
@@ -222,7 +225,11 @@ const DoctorAllDocuments = () => {
                         <h2 className="text-lg font-semibold text-gray-900 truncate">
                           {doc.title}
                         </h2>
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${getStatusBadgeColor(doc.status)}`}>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full font-medium ${getStatusBadgeColor(
+                            doc.status
+                          )}`}
+                        >
                           {doc.status}
                         </span>
                       </div>
@@ -233,7 +240,8 @@ const DoctorAllDocuments = () => {
                         <div className="flex items-center">
                           <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
                           <span>
-                            Submitted {new Date(doc.submittedAt).toLocaleDateString()}
+                            Submitted{" "}
+                            {new Date(doc.submittedAt).toLocaleDateString()}
                           </span>
                         </div>
                         <div className="flex items-center">
@@ -289,4 +297,4 @@ const DoctorAllDocuments = () => {
   );
 };
 
-export default DoctorAllDocuments; 
+export default DoctorAllDocuments;

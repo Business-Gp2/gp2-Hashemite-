@@ -6,12 +6,36 @@ const {
   getDoctor,
   updateDoctor,
   deleteDoctor,
+  getAllDocuments,
+  getPendingDocuments,
+  getMessages,
+  getStats,
+  rejectDocument,
+  approveDocument,
 } = require("../controllers/doctorController");
 
 // Apply authentication middleware to all routes
 router.use(protect);
 
-// Doctor routes
+// Get all documents for doctor's courses
+router.get("/all-documents", getAllDocuments);
+
+// Get pending documents for doctor's courses
+router.get("/pending-documents", getPendingDocuments);
+
+// Get doctor's messages
+router.get("/messages", getMessages);
+
+// Get doctor's stats
+router.get("/stats", getStats);
+
+// Reject document
+router.put("/reject-document/:id", rejectDocument);
+
+// Approve document
+router.put("/approve-document/:id", approveDocument);
+
+// Doctor profile routes
 router.post("/", createDoctor);
 router.get("/:id", getDoctor);
 router.put("/:id", updateDoctor);

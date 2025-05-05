@@ -1,6 +1,6 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require("../middleware/authMiddleware");
 const {
   saveAsDraft,
   uploadDocument,
@@ -12,40 +12,48 @@ const {
   deleteDocument,
   submitDraft,
   getDocumentCounts,
-  getApprovedDocuments
-} = require('../controllers/documentController');
+  getApprovedDocuments,
+  getDocumentsByDoctorCourses,
+  updateDocument,
+} = require("../controllers/documentController");
 
 // Apply authentication middleware to all routes
 router.use(protect);
 
 // Get document counts
-router.get('/counts', getDocumentCounts);
+router.get("/counts", getDocumentCounts);
 
 // Get all documents for the authenticated user
-router.get('/', getUserDocuments);
+router.get("/", getUserDocuments);
 
 // Get draft documents
-router.get('/drafts', getDraftDocuments);
+router.get("/drafts", getDraftDocuments);
 
 // Get approved documents
-router.get('/approved', getApprovedDocuments);
+router.get("/approved", getApprovedDocuments);
 
-// Get a single document
-router.get('/:id', getDocument);
+// Get documents by doctor's courses
+router.get("/doctor-courses", getDocumentsByDoctorCourses);
 
 // Save document as draft
-router.post('/draft', handleFileUpload, saveAsDraft);
-
-// Update a draft document
-router.put('/draft/:id', handleFileUpload, updateDraft);
-
-// Delete a document
-router.delete('/:id', deleteDocument);
-
-// Submit a draft document
-router.put('/submit/:id', submitDraft);
+router.post("/draft", handleFileUpload, saveAsDraft);
 
 // Upload document
-router.post('/upload', handleFileUpload, uploadDocument);
+router.post("/", handleFileUpload, uploadDocument);
 
-module.exports = router; 
+// Update a draft document
+router.put("/draft/:id", handleFileUpload, updateDraft);
+
+// Submit a draft document
+router.put("/submit/:id", submitDraft);
+
+// Update a document
+router.put("/:id", handleFileUpload, updateDocument);
+
+// Get a single document
+router.get("/:id", getDocument);
+
+// Delete a document
+router.delete("/:id", deleteDocument);
+
+module.exports = router;

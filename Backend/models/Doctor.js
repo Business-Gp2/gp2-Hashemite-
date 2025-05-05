@@ -23,8 +23,8 @@ const doctorSchema = new mongoose.Schema(
     },
     courses: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Course",
+        type: String,
+        // enum: ["CS101", "MATH201", "ENG105", "WEB ADVANCE"], // optional
       },
     ],
     officeHours: [

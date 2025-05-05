@@ -11,7 +11,8 @@ const generateToken = (id) => {
 // Register User
 exports.register = async (req, res) => {
   try {
-    const { userId, email, password, firstName, lastName, role, courses } = req.body;
+    const { userId, email, password, firstName, lastName, role, courses } =
+      req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ userId }, { email }] });
@@ -27,13 +28,11 @@ exports.register = async (req, res) => {
       firstName,
       lastName,
       role,
-      courses: courses || []
+      courses: courses || [],
     });
 
-    // Create token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "30d",
-    });
+    // Create token using the generateToken function
+    const token = generateToken(user._id);
 
     res.status(201).json({
       token,
@@ -71,10 +70,8 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Create token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "30d",
-    });
+    // Create token using the generateToken function
+    const token = generateToken(user._id);
 
     res.json({
       token,
@@ -98,24 +95,32 @@ exports.login = async (req, res) => {
 // Logout User
 exports.logout = async (req, res) => {
   try {
-    // In a real application, you might want to:
-    // 1. Blacklist the token
-    // 2. Clear any session data
-    // 3. Clear any cookies
-    
-    res.status(200).json({ message: "Logged out successfully" });
+    // Since we're using JWT tokens in the Authorization header,
+    // we don't need to clear any cookies. The client will handle
+    // removing the token from storage.
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Logout error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error during logout",
+    });
   }
 };
 
 // Get current user
 exports.getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+    // The user is already attached to the request by the auth middleware
+    const user = req.user;
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
     res.json({
       _id: user._id,
       userId: user.userId,

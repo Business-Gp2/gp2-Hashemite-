@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
+const cookieParser = require("cookie-parser");
 
 // Load environment variables
 dotenv.config();
@@ -10,8 +11,24 @@ dotenv.config();
 // Create Express app
 const app = express();
 
+// CORS configuration
+const corsOptions = {
+  origin: "http://localhost:5173", // Your frontend URL
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  exposedHeaders: ["Authorization"],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
+app.use(cookieParser());
+
+// Handle preflight requests
+app.options("*", cors(corsOptions));
+
 app.use(express.json());
 
 // Serve static files from the uploads directory
@@ -24,14 +41,18 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // Import routes
-const authRoutes = require('./routes/authRoutes');
-const documentRoutes = require('./routes/documentRoutes');
-const userRoutes = require('./routes/userRoutes');
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const studentRoutes = require("./routes/studentRoutes");
+const doctorRoutes = require("./routes/doctorRoutes");
+const documentRoutes = require("./routes/documentRoutes");
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/documents", documentRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/students", studentRoutes);
+app.use("/api/doctor", doctorRoutes);
+app.use("/api/documents", documentRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

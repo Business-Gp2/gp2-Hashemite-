@@ -59,7 +59,7 @@ const DraftDocument = () => {
   };
 
   const handleEdit = (document) => {
-    navigate("/upload-document", { state: { document } });
+    navigate("/dashboard/upload-document", { state: { document } });
   };
 
   const handleDelete = async (documentId) => {
@@ -71,16 +71,26 @@ const DraftDocument = () => {
           return;
         }
 
-        await axios.delete(`${API_URL}/api/documents/${documentId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        toast.success("Draft deleted successfully");
-        fetchDrafts();
+        const response = await axios.delete(
+          `${API_URL}/api/documents/${documentId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.data.success) {
+          toast.success("Draft deleted successfully");
+          setDrafts(drafts.filter((doc) => doc._id !== documentId));
+        } else {
+          toast.error(response.data.message || "Failed to delete draft");
+        }
       } catch (error) {
         console.error("Error deleting draft:", error);
-        toast.error("Failed to delete draft");
+        const errorMessage =
+          error.response?.data?.message || "Failed to delete draft";
+        toast.error(errorMessage);
       }
     }
   };
@@ -164,7 +174,7 @@ const DraftDocument = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Draft Documents</h1>
           <button
-            onClick={() => navigate("/upload-document")}
+            onClick={() => navigate("/dashboard/upload-document")}
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             <svg
@@ -208,7 +218,7 @@ const DraftDocument = () => {
               You don't have any draft documents yet.
             </p>
             <button
-              onClick={() => navigate("/upload-document")}
+              onClick={() => navigate("/dashboard/upload-document")}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               <svg
@@ -503,7 +513,9 @@ const DraftDocument = () => {
                           {selectedDocument.title}
                         </h3>
                         <p className="text-sm text-gray-500 mb-4">
-                          {selectedDocument.file.toLowerCase().endsWith('.pdf') ? 'PDF Document' : 'Image File'}
+                          {selectedDocument.file.toLowerCase().endsWith(".pdf")
+                            ? "PDF Document"
+                            : "Image File"}
                         </p>
                         <a
                           href={`${API_URL}${selectedDocument.file}`}
