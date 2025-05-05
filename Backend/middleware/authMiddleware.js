@@ -16,10 +16,20 @@ const protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       // Get user from token
-      req.user = await User.findById(decoded.id).select("-password");
+      const user = await User.findById(decoded.id).select("-password");
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Set both id and _id for compatibility
+      req.user = user;
+      req.user.id = user._id;
+      req.user._id = user._id;
 
       next();
     } catch (error) {
+      console.error('Auth middleware error:', error);
       res.status(401).json({ message: "Not authorized" });
     }
   }

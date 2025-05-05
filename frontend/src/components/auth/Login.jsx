@@ -29,12 +29,27 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
+
     try {
-      await login(formData.userId, formData.password);
-      toast.success("Login successful!");
-      navigate("/dashboard");
+      const userData = await login(formData.userId, formData.password);
+      
+      if (userData) {
+        toast.success("Login successful!");
+        // Redirect based on user role
+        if (userData.role === "doctor") {
+          navigate("/doctor/dashboard");
+        } else {
+          navigate("/dashboard");
+        }
+      } else {
+        throw new Error("Login failed");
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "An error occurred during login");
+      console.error("Login error:", err);
+      const errorMessage = err.response?.data?.message || "Invalid credentials";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

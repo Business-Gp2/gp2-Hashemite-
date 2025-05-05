@@ -23,11 +23,15 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+// Import routes
+const authRoutes = require('./routes/authRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+const userRoutes = require('./routes/userRoutes');
+
 // Routes
-app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/students", require("./routes/studentRoutes"));
-app.use("/api/doctors", require("./routes/doctorRoutes"));
-app.use("/api/documents", require("./routes/documentRoutes"));
+app.use("/api/auth", authRoutes);
+app.use("/api/documents", documentRoutes);
+app.use("/api/users", userRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

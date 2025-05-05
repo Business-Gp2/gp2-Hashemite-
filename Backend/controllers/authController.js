@@ -11,38 +11,46 @@ const generateToken = (id) => {
 // Register User
 exports.register = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role, userId } = req.body;
+    const { userId, email, password, firstName, lastName, role, courses } = req.body;
 
     // Check if user already exists
-    const userExists = await User.findOne({ $or: [{ email }, { userId }] });
-    if (userExists) {
+    const existingUser = await User.findOne({ $or: [{ userId }, { email }] });
+    if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Create user
+    // Create new user
     const user = await User.create({
+      userId,
       email,
       password,
       firstName,
       lastName,
       role,
-      userId,
+      courses: courses || []
     });
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Create token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d",
+    });
 
     res.status(201).json({
-      _id: user._id,
-      userId: user.userId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
       token,
+      user: {
+        _id: user._id,
+        userId: user.userId,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        courses: user.courses,
+        profilePic: user.profilePic,
+      },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Registration error:", error);
+    res.status(500).json({ message: "Error registering user" });
   }
 };
 
@@ -51,7 +59,7 @@ exports.login = async (req, res) => {
   try {
     const { userId, password } = req.body;
 
-    // Check for user by userId
+    // Find user
     const user = await User.findOne({ userId });
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -63,20 +71,27 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Create token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "30d",
+    });
 
     res.json({
-      _id: user._id,
-      userId: user.userId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
       token,
+      user: {
+        _id: user._id,
+        userId: user.userId,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        courses: user.courses,
+        profilePic: user.profilePic,
+      },
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Error logging in" });
   }
 };
 
@@ -91,5 +106,28 @@ exports.logout = async (req, res) => {
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Get current user
+exports.getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({
+      _id: user._id,
+      userId: user.userId,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      courses: user.courses,
+      profilePic: user.profilePic,
+    });
+  } catch (error) {
+    console.error("Get current user error:", error);
+    res.status(500).json({ message: "Error getting current user" });
   }
 };

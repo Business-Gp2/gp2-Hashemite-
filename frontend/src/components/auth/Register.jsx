@@ -15,6 +15,7 @@ const Register = () => {
     lastName: "",
     role: "student",
     userId: "",
+    courses: [],
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,25 +27,50 @@ const Register = () => {
   }, [error]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type } = e.target;
+    
+    if (type === 'select-multiple') {
+      // Handle multiple select
+      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+      setFormData(prev => ({ ...prev, [name]: selectedOptions }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
+
+    // Validate required fields
+    if (!formData.courses || formData.courses.length === 0) {
+      setError("Please select at least one course");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await axios.post(
         "http://localhost:5000/api/auth/register",
         formData
       );
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data));
-      toast.success("Registration successful!");
-      navigate("/dashboard");
+
+      if (response.data.token) {
+        // Store token and user data
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+        
+        toast.success("Registration successful!");
+        navigate("/dashboard");
+      } else {
+        throw new Error("No token received from server");
+      }
     } catch (err) {
-      setError(
-        err.response?.data?.message || "An error occurred during registration"
-      );
+      console.error("Registration error:", err);
+      const errorMessage = err.response?.data?.message || "An error occurred during registration";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -229,6 +255,98 @@ const Register = () => {
 
             <div>
               <label
+                htmlFor="courses"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Select Your Courses
+              </label>
+              <div className="bg-white rounded-lg border border-gray-300 p-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="courses"
+                      value="CS101"
+                      checked={formData.courses.includes("CS101")}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          courses: e.target.checked
+                            ? [...prev.courses, value]
+                            : prev.courses.filter(course => course !== value)
+                        }));
+                      }}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <span className="text-gray-700">CS101</span>
+                  </label>
+                  <label className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="courses"
+                      value="MATH201"
+                      checked={formData.courses.includes("MATH201")}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          courses: e.target.checked
+                            ? [...prev.courses, value]
+                            : prev.courses.filter(course => course !== value)
+                        }));
+                      }}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <span className="text-gray-700">MATH201</span>
+                  </label>
+                  <label className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="courses"
+                      value="ENG105"
+                      checked={formData.courses.includes("ENG105")}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          courses: e.target.checked
+                            ? [...prev.courses, value]
+                            : prev.courses.filter(course => course !== value)
+                        }));
+                      }}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <span className="text-gray-700">ENG105</span>
+                  </label>
+                  <label className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="courses"
+                      value="WEB ADVANCE"
+                      checked={formData.courses.includes("WEB ADVANCE")}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          courses: e.target.checked
+                            ? [...prev.courses, value]
+                            : prev.courses.filter(course => course !== value)
+                        }));
+                      }}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <span className="text-gray-700">WEB ADVANCE</span>
+                  </label>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Select all courses you want to enroll in
+              </p>
+            </div>
+
+            <div>
+              <label
                 htmlFor="role"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
@@ -254,7 +372,8 @@ const Register = () => {
                 <select
                   id="role"
                   name="role"
-                  className="pl-10 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-white"
+                  required
+                  className="pl-10 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
                   value={formData.role}
                   onChange={handleChange}
                 >

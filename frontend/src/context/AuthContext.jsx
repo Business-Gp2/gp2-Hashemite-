@@ -7,125 +7,119 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Set up axios interceptor for token
-  useEffect(() => {
-    const token = Cookies.get("token");
-    if (token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    }
-    return () => {
-      delete axios.defaults.headers.common["Authorization"];
-    };
-  }, []);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const storedUser = Cookies.get("user");
-    const storedToken = Cookies.get("token");
+    const initializeAuth = async () => {
+      const token = Cookies.get('token');
+      const storedUser = Cookies.get('user');
 
-    if (storedUser && storedToken) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        console.log("Stored user and token found:", parsedUser);
-      } catch (error) {
-        console.error("Error parsing stored user:", error);
-        // Clear invalid data
-        Cookies.remove("user");
-        Cookies.remove("token");
+      if (token && storedUser) {
+        try {
+          // Set the token in axios headers
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          
+          // Try to fetch fresh user data
+          try {
+            const response = await axios.get('http://localhost:5000/api/auth/me');
+            setUser(response.data);
+            setIsAuthenticated(true);
+            // Update stored user data
+            Cookies.set('user', JSON.stringify(response.data), { expires: 30 });
+          } catch (error) {
+            console.error('Error fetching user data:', error);
+            // If fetch fails, use stored user data
+            setUser(JSON.parse(storedUser));
+            setIsAuthenticated(true);
+          }
+        } catch (error) {
+          console.error('Error initializing auth:', error);
+          // Clear invalid data
+          Cookies.remove('token');
+          Cookies.remove('user');
+          delete axios.defaults.headers.common['Authorization'];
+          setIsAuthenticated(false);
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (userId, password) => {
     try {
-      console.log("Attempting login with:", userId);
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        {
-          userId,
-          password,
-        }
-      );
-      const userData = response.data;
-      console.log("Login successful, user data:", userData);
+      const response = await axios.post('http://localhost:5000/api/auth/login', {
+        userId,
+        password
+      });
 
-      // Store user data and token in cookies
-      Cookies.set("token", userData.token, { expires: 30 }); // 30 days
-      Cookies.set("user", JSON.stringify(userData), { expires: 30 });
+      if (!response.data.token || !response.data.user) {
+        throw new Error('Invalid response from server');
+      }
 
-      // Set the token in axios headers
-      axios.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${userData.token}`;
-
+      const { token, user } = response.data;
+      
+      // Store token and user data
+      Cookies.set('token', token, { expires: 30 });
+      Cookies.set('user', JSON.stringify(user), { expires: 30 });
+      
+      // Set axios headers
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      
       // Update state
-      setUser(userData);
-      return userData;
+      setUser(user);
+      setIsAuthenticated(true);
+      return user;
     } catch (error) {
-      console.error("Login error:", error.response?.data || error.message);
+      console.error('Login error:', error);
+      // Clear any existing auth data
+      Cookies.remove('token');
+      Cookies.remove('user');
+      delete axios.defaults.headers.common['Authorization'];
+      setUser(null);
+      setIsAuthenticated(false);
       throw error;
     }
   };
 
-  const register = async (userData) => {
+  const logout = async () => {
     try {
-      console.log("Attempting registration with:", userData);
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/register",
-        userData
-      );
-      const newUser = response.data;
-      console.log("Registration successful, user data:", newUser);
-
-      // Store user data and token in cookies
-      Cookies.set("token", newUser.token, { expires: 30 }); // 30 days
-      Cookies.set("user", JSON.stringify(newUser), { expires: 30 });
-
-      // Set the token in axios headers
-      axios.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${newUser.token}`;
-
-      // Update state
-      setUser(newUser);
-      return newUser;
+      const token = Cookies.get('token');
+      await axios.post('http://localhost:5000/api/auth/logout', null, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
     } catch (error) {
-      console.error(
-        "Registration error:",
-        error.response?.data || error.message
-      );
-      throw error;
+      console.error('Error during logout:', error);
+    } finally {
+      // Clear all auth data
+      Cookies.remove('token');
+      Cookies.remove('user');
+      delete axios.defaults.headers.common['Authorization'];
+      setUser(null);
+      setIsAuthenticated(false);
     }
   };
 
-  const logout = () => {
-    // Clear cookies
-    Cookies.remove("token");
-    Cookies.remove("user");
-    // Clear axios headers
-    delete axios.defaults.headers.common["Authorization"];
-    // Clear state
-    setUser(null);
-    console.log("User logged out");
+  const updateUser = (newUserData) => {
+    setUser(newUserData);
+    // Update stored user data
+    Cookies.set('user', JSON.stringify(newUserData), { expires: 30 });
   };
 
-  const value = {
-    user,
-    loading,
-    login,
-    register,
-    logout,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, loading, isAuthenticated, login, logout, updateUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

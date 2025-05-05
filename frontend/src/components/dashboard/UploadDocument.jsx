@@ -4,9 +4,11 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PDFDocument } from "pdf-lib";
+import { useDropzone } from "react-dropzone";
+import Cookies from "js-cookie";
 
 // Backend API URL configuration
-const API_URL = "http://localhost:5000"; // Update this to match your backend URL
+const API_URL = "http://localhost:5000";
 
 const UploadDocument = () => {
   const { user } = useAuth();
@@ -22,9 +24,28 @@ const UploadDocument = () => {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [documentId, setDocumentId] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: {
+      'application/pdf': ['.pdf'],
+      'image/*': ['.png', '.jpg', '.jpeg']
+    },
+    maxSize: 5 * 1024 * 1024, // 5MB
+    multiple: false,
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        setSelectedFile(acceptedFiles[0]);
+        setFormData(prev => ({
+          ...prev,
+          file: acceptedFiles[0]
+        }));
+      }
+    }
+  });
 
   useEffect(() => {
-    // Check if we're editing an existing document
     if (location.state?.document) {
       const { document } = location.state;
       setIsEditing(true);
@@ -34,7 +55,7 @@ const UploadDocument = () => {
         type: document.type,
         description: document.description,
         course: document.course,
-        file: null, // We'll keep the existing file unless changed
+        file: null,
       });
     }
   }, [location.state]);
@@ -47,127 +68,18 @@ const UploadDocument = () => {
     }));
   };
 
-  const convertToPDF = async (file) => {
-    try {
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage();
-      const { width, height } = page.getSize();
-
-      // Add file information
-      page.drawText(
-        `File Information:\nName: ${file.name}\nType: ${file.type}\nSize: ${(
-          file.size / 1024
-        ).toFixed(2)} KB`,
-        {
-          x: 50,
-          y: height - 50,
-          size: 12,
-        }
-      );
-
-      // Handle different file types
-      if (file.type.startsWith("image/")) {
-        // For images, we'll just add the file info since we can't easily embed images
-        page.drawText(
-          "\n\nThis is an image file. The original image is preserved in the upload.",
-          {
-            x: 50,
-            y: height - 100,
-            size: 12,
-          }
-        );
-      } else if (file.type === "application/pdf") {
-        // If it's already a PDF, return it as is
-        return file;
-      } else if (
-        file.type.startsWith("text/") ||
-        file.type.includes("word") ||
-        file.type.includes("excel")
-      ) {
-        // For text-based files, try to read the content
-        try {
-          const text = await file.text();
-          page.drawText(`\n\nFile Content:\n${text.substring(0, 1000)}...`, {
-            x: 50,
-            y: height - 150,
-            size: 12,
-          });
-        } catch (error) {
-          page.drawText(
-            "\n\nUnable to extract text content from this file type.",
-            {
-              x: 50,
-              y: height - 100,
-              size: 12,
-            }
-          );
-        }
-      } else {
-        // For other file types
-        page.drawText(
-          "\n\nThis file type cannot be directly converted to PDF. The original file is preserved in the upload.",
-          {
-            x: 50,
-            y: height - 100,
-            size: 12,
-          }
-        );
-      }
-
-      // Save the PDF
-      const pdfBytes = await pdfDoc.save();
-      return new File([pdfBytes], `${file.name}.pdf`, {
-        type: "application/pdf",
-      });
-    } catch (error) {
-      console.error("Error converting to PDF:", error);
-      throw new Error("Failed to convert file to PDF");
-    }
-  };
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Check file size (5MB limit)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("File size should be less than 5MB");
-        return;
-      }
-
-      try {
-        // Convert the file to PDF
-        const pdfFile = await convertToPDF(file);
-        setFormData((prev) => ({
-          ...prev,
-          file: pdfFile,
-        }));
-        toast.success("File processed successfully");
-      } catch (error) {
-        toast.error("Failed to process file");
-      }
-    }
-  };
-
-  const handleSubmit = async (e, isDraft = false) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    if (!selectedFile) {
+      toast.error("Please select a file to upload");
+      return;
+    }
 
     try {
-      // Validate form data
-      if (
-        !formData.title ||
-        !formData.type ||
-        !formData.description ||
-        !formData.course
-      ) {
-        toast.error("Please fill in all required fields");
-        setLoading(false);
-        return;
-      }
-
-      if (!formData.file && !isEditing) {
-        toast.error("Please select a file to upload");
-        setLoading(false);
+      setSubmitting(true);
+      const token = Cookies.get("token");
+      if (!token) {
+        navigate("/login");
         return;
       }
 
@@ -176,187 +88,250 @@ const UploadDocument = () => {
       formDataToSend.append("type", formData.type);
       formDataToSend.append("description", formData.description);
       formDataToSend.append("course", formData.course);
-      if (formData.file) {
-        formDataToSend.append("file", formData.file);
-      }
+      formDataToSend.append("file", selectedFile);
 
-      let response;
-      if (isEditing) {
-        // Update existing document
-        response = await axios.put(
-          `${API_URL}/api/documents/draft/${documentId}`,
-          formDataToSend,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-      } else {
-        // Create new document
-        const endpoint = isDraft
-          ? `${API_URL}/api/documents/draft`
-          : `${API_URL}/api/documents/upload`;
-        response = await axios.post(endpoint, formDataToSend, {
+      const response = await axios.post(
+        `${API_URL}/api/documents`,
+        formDataToSend,
+        {
           headers: {
+            Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
           },
-        });
-      }
+        }
+      );
 
-      toast.success(response.data.message);
-      // Reset form
-      setFormData({
-        title: "",
-        type: "homework",
-        description: "",
-        course: "",
-        file: null,
-      });
-      document.getElementById("fileInput").value = "";
-
-      // Navigate back to drafts page if editing
-      if (isEditing) {
-        navigate("/draft-document");
-      }
+      toast.success("Document uploaded successfully");
+      navigate("/my-documents");
     } catch (error) {
-      console.error("Upload error:", error);
-      if (error.code === "ERR_NETWORK") {
-        toast.error(
-          "Cannot connect to the server. Please make sure the backend server is running."
-        );
-      } else if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        toast.error(error.response.data.message || "Failed to upload document");
-      } else if (error.request) {
-        // The request was made but no response was received
-        toast.error("No response from server. Please try again.");
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        toast.error("An error occurred while uploading the document");
-      }
+      console.error("Error uploading document:", error);
+      toast.error(error.response?.data?.message || "Failed to upload document");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!selectedFile) {
+      toast.error("Please select a file to save as draft");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const token = Cookies.get("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const formDataToSend = new FormData();
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("type", formData.type);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("course", formData.course);
+      formDataToSend.append("file", selectedFile);
+      formDataToSend.append("status", "draft");
+
+      const response = await axios.post(
+        `${API_URL}/api/documents/draft`,
+        formDataToSend,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      toast.success("Draft saved successfully");
+      navigate("/draft-documents");
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      toast.error(error.response?.data?.message || "Failed to save draft");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">
-        {isEditing ? "Edit Draft Document" : "Upload Document"}
-      </h1>
-      <div className="bg-white shadow rounded-lg p-6">
-        <form className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Title
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
+    <div className="bg-white min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
+            {isEditing ? "Edit Document" : "Upload Document"}
+          </h1>
+          <p className="mt-4 text-xl text-gray-500">
+            {isEditing
+              ? "Update your document information below"
+              : "Share your work with a beautiful PDF conversion"}
+          </p>
+        </div>
+
+        <div className="bg-white shadow-xl rounded-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-8 py-6 border-b border-gray-100">
+            <h2 className="text-xl font-medium text-gray-800">
+              Document Information
+            </h2>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Type
-            </label>
-            <select
-              name="type"
-              value={formData.type}
-              onChange={handleInputChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            >
-              <option value="homework">Homework</option>
-              <option value="excuse_of_absence">Excuse of Absence</option>
-              <option value="grade_review">Grade Review</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
+          <form className="px-8 py-10 space-y-8">
+            <div className="grid grid-cols-1 gap-y-8 gap-x-6 sm:grid-cols-6">
+              <div className="sm:col-span-6">
+                <label
+                  htmlFor="title"
+                  className="block text-base font-medium text-gray-700 mb-2"
+                >
+                  Title
+                </label>
+                <div className="mt-1">
+                  <input
+                    type="text"
+                    name="title"
+                    id="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full text-base border-gray-300 rounded-lg py-3 px-4"
+                    required
+                  />
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              rows={4}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
+              <div className="sm:col-span-3">
+                <label
+                  htmlFor="type"
+                  className="block text-base font-medium text-gray-700 mb-2"
+                >
+                  Document Type
+                </label>
+                <div className="mt-1">
+                  <select
+                    name="type"
+                    id="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full text-base border-gray-300 rounded-lg py-3 px-4"
+                    required
+                  >
+                    <option value="homework">Homework</option>
+                    <option value="excuse_of_absence">Excuse of Absence</option>
+                    <option value="grade_review">Grade Review</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Course
-            </label>
-            <input
-              type="text"
-              name="course"
-              value={formData.course}
-              onChange={handleInputChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
+              <div className="sm:col-span-3">
+                <label
+                  htmlFor="course"
+                  className="block text-base font-medium text-gray-700 mb-2"
+                >
+                  Course
+                </label>
+                <div className="mt-1">
+                  <select
+                    name="course"
+                    id="course"
+                    value={formData.course}
+                    onChange={handleInputChange}
+                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full text-base border-gray-300 rounded-lg py-3 px-4"
+                    required
+                  >
+                    <option value="">Select a course</option>
+                    <option value="CS101">CS101 - Introduction to Computer Science</option>
+                    <option value="MATH201">MATH201 - Advanced Mathematics</option>
+                    <option value="ENG105">ENG105 - English Composition</option>
+                    <option value="WEB ADVANCE">WEB ADVANCE - Advanced Web Development</option>
+                  </select>
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Document (Any file type - will be processed to PDF)
-            </label>
-            <input
-              id="fileInput"
-              type="file"
-              onChange={handleFileChange}
-              className="mt-1 block w-full text-sm text-gray-500
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-md file:border-0
-                file:text-sm file:font-semibold
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100"
-              required={!isEditing}
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              Maximum file size: 5MB. File will be processed and converted to
-              PDF format.
-            </p>
-          </div>
+              <div className="sm:col-span-6">
+                <label
+                  htmlFor="description"
+                  className="block text-base font-medium text-gray-700 mb-2"
+                >
+                  Description
+                </label>
+                <div className="mt-1">
+                  <textarea
+                    name="description"
+                    id="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows={6}
+                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full text-base border-gray-300 rounded-lg py-3 px-4"
+                    required
+                  />
+                </div>
+              </div>
 
-          <div className="flex justify-end space-x-4">
-            {!isEditing && (
+              <div className="sm:col-span-6">
+                <label className="block text-base font-medium text-gray-700 mb-2">
+                  Upload File
+                </label>
+                <div className="mt-1">
+                  <div
+                    {...getRootProps()}
+                    className={`mt-1 flex justify-center px-8 pt-8 pb-8 border-2 border-dashed rounded-lg ${
+                      isDragActive
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    <div className="space-y-3 text-center">
+                      <svg
+                        className={`mx-auto h-16 w-16 ${
+                          isDragActive ? "text-blue-500" : "text-gray-400"
+                        }`}
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <div className="flex text-base text-gray-600">
+                        <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                          <span>Upload a file</span>
+                          <input {...getInputProps()} />
+                        </label>
+                        <p className="pl-1">or drag and drop</p>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        PDF, PNG, JPG, JPEG up to 5MB
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4 pt-6">
               <button
                 type="button"
-                onClick={(e) => handleSubmit(e, true)}
-                disabled={loading}
-                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50"
+                onClick={handleSaveDraft}
+                className="inline-flex items-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={submitting}
               >
-                {loading ? "Saving..." : "Save as Draft"}
+                {submitting ? "Saving..." : "Save as Draft"}
               </button>
-            )}
-            <button
-              type="button"
-              onClick={(e) => handleSubmit(e, false)}
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-            >
-              {loading
-                ? isEditing
-                  ? "Updating..."
-                  : "Uploading..."
-                : isEditing
-                ? "Update"
-                : "Upload"}
-            </button>
-          </div>
-        </form>
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={submitting}
+              >
+                {submitting ? "Uploading..." : "Upload Document"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

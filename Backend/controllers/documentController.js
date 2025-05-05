@@ -372,4 +372,53 @@ exports.submitDraft = async (req, res) => {
       message: error.message
     });
   }
+};
+
+// Get document counts by status for a user
+exports.getDocumentCounts = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    const totalCount = await Document.countDocuments({ user: userId });
+    const draftCount = await Document.countDocuments({ user: userId, status: 'draft' });
+    const approvedCount = await Document.countDocuments({ user: userId, status: 'approved' });
+    const pendingCount = await Document.countDocuments({ user: userId, status: 'submitted' });
+
+    res.status(200).json({
+      success: true,
+      counts: {
+        total: totalCount,
+        draft: draftCount,
+        approved: approvedCount,
+        pending: pendingCount
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Get approved documents for a user
+exports.getApprovedDocuments = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const documents = await Document.find({ 
+      user: userId,
+      status: 'approved'
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      documents
+    });
+  } catch (error) {
+    console.error('Error getting approved documents:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
 }; 

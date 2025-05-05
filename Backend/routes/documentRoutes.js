@@ -10,17 +10,25 @@ const {
   getDocument,
   updateDraft,
   deleteDocument,
-  submitDraft
+  submitDraft,
+  getDocumentCounts,
+  getApprovedDocuments
 } = require('../controllers/documentController');
 
 // Apply authentication middleware to all routes
 router.use(protect);
+
+// Get document counts
+router.get('/counts', getDocumentCounts);
 
 // Get all documents for the authenticated user
 router.get('/', getUserDocuments);
 
 // Get draft documents
 router.get('/drafts', getDraftDocuments);
+
+// Get approved documents
+router.get('/approved', getApprovedDocuments);
 
 // Get a single document
 router.get('/:id', getDocument);

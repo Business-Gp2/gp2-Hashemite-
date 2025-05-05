@@ -32,9 +32,20 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["student", "doctor"],
+      enum: ["student", "doctor", "admin"],
       default: "student",
       required: true,
+    },
+    courses: [{
+      type: String,
+      enum: ["CS101", "MATH201", "ENG105", "WEB ADVANCE"],
+    }],
+    profilePic: {
+      type: String,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   {
