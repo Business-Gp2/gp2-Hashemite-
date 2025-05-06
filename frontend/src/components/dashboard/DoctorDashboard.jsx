@@ -52,6 +52,8 @@ const DoctorDashboard = () => {
           },
         });
 
+        console.log("Doctor stats API response:", response.data);
+
         if (response.data.success) {
           setStats(response.data.stats);
         }
@@ -93,6 +95,26 @@ const DoctorDashboard = () => {
 
     fetchDocuments();
   }, []);
+
+  // Calculate statistics from documents
+  const calculatedStats = React.useMemo(() => {
+    const totalDocuments = documents.length;
+    const approvedDocuments = documents.filter(
+      (doc) => doc.status === "approved"
+    ).length;
+    const pendingDocuments = documents.filter(
+      (doc) => doc.status === "submitted"
+    ).length;
+    const rejectedDocuments = documents.filter(
+      (doc) => doc.status === "rejected"
+    ).length;
+    return {
+      totalDocuments,
+      approvedDocuments,
+      pendingDocuments,
+      rejectedDocuments,
+    };
+  }, [documents]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -163,7 +185,7 @@ const DoctorDashboard = () => {
                   Total Documents
                 </h3>
                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.totalDocuments}
+                  {calculatedStats.totalDocuments}
                 </p>
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
@@ -180,7 +202,7 @@ const DoctorDashboard = () => {
                   Pending Review
                 </h3>
                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.pendingDocuments}
+                  {calculatedStats.pendingDocuments}
                 </p>
               </div>
               <div className="p-3 bg-yellow-100 rounded-full">
@@ -195,7 +217,7 @@ const DoctorDashboard = () => {
               <div>
                 <h3 className="text-lg font-medium text-gray-700">Approved</h3>
                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.approvedDocuments}
+                  {calculatedStats.approvedDocuments}
                 </p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
@@ -210,7 +232,7 @@ const DoctorDashboard = () => {
               <div>
                 <h3 className="text-lg font-medium text-gray-700">Rejected</h3>
                 <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.rejectedDocuments}
+                  {calculatedStats.rejectedDocuments}
                 </p>
               </div>
               <div className="p-3 bg-red-100 rounded-full">
@@ -220,62 +242,60 @@ const DoctorDashboard = () => {
           </div>
         </div>
 
-        {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Total Students */}
-          <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-medium text-gray-700">
-                  Total Students
+        {/* Quick Actions */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Review Documents */}
+            <Link
+              key="review-documents"
+              to="/doctor/pending-documents"
+              className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="p-3 bg-blue-50 rounded-full group-hover:bg-blue-100 transition-colors">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="mt-4 font-medium text-gray-900">
+                  Review Documents
                 </h3>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.totalStudents}
-                </p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
+            </Link>
 
-          {/* Total Courses */}
-          <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-medium text-gray-700">
-                  Total Courses
-                </h3>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.totalCourses}
-                </p>
+            {/* My Courses */}
+            <Link
+              key="my-courses"
+              to="/doctor/profile"
+              className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="p-3 bg-green-50 rounded-full group-hover:bg-green-100 transition-colors">
+                  <BookOpen className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="mt-4 font-medium text-gray-900">My Courses</h3>
               </div>
-              <div className="p-3 bg-indigo-100 rounded-full">
-                <BookOpen className="w-6 h-6 text-indigo-600" />
-              </div>
-            </div>
-          </div>
+            </Link>
 
-          {/* Unread Messages */}
-          <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-medium text-gray-700">
-                  Unread Messages
-                </h3>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {stats.unreadMessages}
-                </p>
+            {/* Students */}
+            <Link
+              key="students"
+              to="/doctor/messages"
+              className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="p-3 bg-purple-50 rounded-full group-hover:bg-purple-100 transition-colors">
+                  <Users className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="mt-4 font-medium text-gray-900">Messages</h3>
               </div>
-              <div className="p-3 bg-pink-100 rounded-full">
-                <MessageSquare className="w-6 h-6 text-pink-600" />
-              </div>
-            </div>
+            </Link>
           </div>
         </div>
 
         {/* Documents Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 mt-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold">Course Documents</h2>
           </div>
@@ -351,6 +371,59 @@ const DoctorDashboard = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* All Documents Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 mt-8">
+          <h2 className="text-2xl font-semibold mb-4">All Documents</h2>
+          {documents.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No documents found for your courses
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Title
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Type
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Course
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Status
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Student
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map((doc) => (
+                    <tr key={doc._id}>
+                      <td className="px-4 py-2">{doc.title}</td>
+                      <td className="px-4 py-2">{doc.type}</td>
+                      <td className="px-4 py-2">{doc.course}</td>
+                      <td className="px-4 py-2 capitalize">{doc.status}</td>
+                      <td className="px-4 py-2">
+                        {doc.user?.firstName} {doc.user?.lastName}
+                      </td>
+                      <td className="px-4 py-2">
+                        {new Date(doc.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

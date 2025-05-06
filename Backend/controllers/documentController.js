@@ -560,3 +560,17 @@ exports.updateDraft = async (req, res) => {
     });
   }
 };
+
+// Get all documents by status for admin
+exports.getDocumentsByStatus = async (req, res) => {
+  try {
+    const { status } = req.query; // e.g., ?status=approved
+    const query = status ? { status } : {};
+    const documents = await Document.find(query)
+      .populate("user", "firstName lastName")
+      .populate("course");
+    res.status(200).json({ success: true, documents });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

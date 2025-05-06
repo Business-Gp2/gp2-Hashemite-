@@ -12,6 +12,7 @@ const {
   getStats,
   rejectDocument,
   approveDocument,
+  getAllDoctors,
 } = require("../controllers/doctorController");
 
 // Apply authentication middleware to all routes
@@ -34,6 +35,9 @@ router.put("/reject-document/:id", rejectDocument);
 
 // Approve document
 router.put("/approve-document/:id", approveDocument);
+
+// Get all doctors (for student message dropdown)
+router.get("/all", getAllDoctors);
 
 // Doctor profile routes
 router.post("/", createDoctor);

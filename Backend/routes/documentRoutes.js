@@ -15,6 +15,7 @@ const {
   getApprovedDocuments,
   getDocumentsByDoctorCourses,
   updateDocument,
+  getDocumentsByStatus,
 } = require("../controllers/documentController");
 
 // Apply authentication middleware to all routes
@@ -55,5 +56,8 @@ router.get("/:id", getDocument);
 
 // Delete a document
 router.delete("/:id", deleteDocument);
+
+// Admin: Get all documents by status
+router.get("/admin/documents-by-status", getDocumentsByStatus);
 
 module.exports = router;

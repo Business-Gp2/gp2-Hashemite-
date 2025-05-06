@@ -186,8 +186,8 @@ exports.getMessages = async (req, res) => {
 // Get doctor's stats
 exports.getStats = async (req, res) => {
   try {
-    // Get doctor's courses from the Doctor model
-    const doctor = await Doctor.findOne({ user: req.user._id });
+    // Get doctor's courses from the Doctor model (as codes)
+    const doctor = await Doctor.findOne({ user: req.user._id }); // No populate
     if (!doctor) {
       return res.status(404).json({
         success: false,
@@ -205,6 +205,8 @@ exports.getStats = async (req, res) => {
       totalStudents: 0,
       totalCourses: doctorCourses.length,
       unreadMessages: 0,
+      courseDetails: [],
+      studentDetails: [],
     };
 
     if (doctorCourses.length > 0) {
@@ -231,10 +233,27 @@ exports.getStats = async (req, res) => {
         status: "rejected",
       });
 
-      // Get total students enrolled in these courses
-      stats.totalStudents = await Student.countDocuments({
+      // Get students enrolled in these courses with their details
+      const students = await Student.find({
         courses: { $in: doctorCourses },
-      });
+      }).populate("user", "firstName lastName");
+
+      stats.totalStudents = students.length;
+      stats.studentDetails = students.map((student) => ({
+        id: student._id,
+        name: student.user
+          ? `${student.user.firstName} ${student.user.lastName}`
+          : "Unknown",
+        studentId: student.studentId,
+        department: student.department,
+      }));
+
+      // Provide courseDetails as just the code (and name as code)
+      stats.courseDetails = doctorCourses.map((code) => ({
+        id: code,
+        code,
+        name: code,
+      }));
     }
 
     res.status(200).json({
@@ -337,5 +356,20 @@ exports.approveDocument = async (req, res) => {
       success: false,
       message: error.message || "Error approving document",
     });
+  }
+};
+
+// Get all doctors (for student message dropdown)
+exports.getAllDoctors = async (req, res) => {
+  try {
+    const doctors = await Doctor.find().populate("user", "firstName lastName");
+    const doctorList = doctors.map((doc) => ({
+      userId: doc.user._id,
+      firstName: doc.user.firstName,
+      lastName: doc.user.lastName,
+    }));
+    res.status(200).json({ success: true, doctors: doctorList });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

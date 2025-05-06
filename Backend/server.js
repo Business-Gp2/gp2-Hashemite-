@@ -46,6 +46,7 @@ const userRoutes = require("./routes/userRoutes");
 const studentRoutes = require("./routes/studentRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
 const documentRoutes = require("./routes/documentRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -53,6 +54,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/doctor", doctorRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/messages", messageRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
