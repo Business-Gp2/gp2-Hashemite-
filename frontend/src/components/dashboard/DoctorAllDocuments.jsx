@@ -166,24 +166,7 @@ const DoctorAllDocuments = () => {
               />
             </div>
           </div>
-          <div className="sm:col-span-1">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Filter className="h-5 w-5 text-gray-400" />
-              </div>
-              <select
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              >
-                <option value="all">All Types</option>
-                <option value="assignment">Assignment</option>
-                <option value="project">Project</option>
-                <option value="report">Report</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
+          
           <div className="sm:col-span-1">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

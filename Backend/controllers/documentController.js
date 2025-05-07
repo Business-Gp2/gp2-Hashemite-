@@ -2,19 +2,11 @@ const Document = require("../models/Document");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const cloudinary = require("cloudinary").v2;
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: "dtn8nedbg",
-  api_key: "764718657862329",
-  api_secret: "QbKxrc4mYfoqjbVrUkyySbOyZIc",
-});
-
-// Configure multer for temporary file storage
+// Configure multer for file storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = "uploads/temp";
+    const uploadDir = "uploads/documents";
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -31,33 +23,32 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
+  fileFilter: (req, file, cb) => {
+    // Accept only PDF and image files
+    if (file.mimetype === 'application/pdf' || file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF and image files are allowed!'), false);
+    }
+  }
 }).single("file");
 
 // Save document as draft
 exports.saveAsDraft = async (req, res) => {
   try {
+    console.log("Saving draft document");
+    console.log("Request body:", req.body);
+    console.log("Request file:", req.file);
+
     const { title, type, description, course } = req.body;
     const userId = req.user._id;
 
-    let cloudinaryResult = null;
-    if (req.file) {
-      try {
-        // Upload to Cloudinary
-        cloudinaryResult = await cloudinary.uploader.upload(req.file.path, {
-          folder: "documents",
-          resource_type: "auto",
-        });
-
-        // Delete temporary file
-        fs.unlinkSync(req.file.path);
-      } catch (uploadError) {
-        console.error("Cloudinary upload error:", uploadError);
-        // Delete temporary file even if upload fails
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        throw new Error("Failed to upload file to Cloudinary");
-      }
+    if (!req.file) {
+      console.error("No file uploaded");
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a file",
+      });
     }
 
     const document = new Document({
@@ -65,13 +56,15 @@ exports.saveAsDraft = async (req, res) => {
       type,
       description,
       course,
-      file: cloudinaryResult ? cloudinaryResult.secure_url : null,
-      cloudinaryId: cloudinaryResult ? cloudinaryResult.public_id : null,
+      file: `/uploads/documents/${req.file.filename}`,
       status: "draft",
       user: userId,
     });
 
+    console.log("Created document object:", document);
+
     await document.save();
+    console.log("Document saved successfully");
 
     res.status(201).json({
       success: true,
@@ -100,32 +93,12 @@ exports.uploadDocument = async (req, res) => {
       });
     }
 
-    let cloudinaryResult;
-    try {
-      // Upload to Cloudinary
-      cloudinaryResult = await cloudinary.uploader.upload(req.file.path, {
-        folder: "documents",
-        resource_type: "auto",
-      });
-
-      // Delete temporary file
-      fs.unlinkSync(req.file.path);
-    } catch (uploadError) {
-      console.error("Cloudinary upload error:", uploadError);
-      // Delete temporary file even if upload fails
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-      throw new Error("Failed to upload file to Cloudinary");
-    }
-
     const document = new Document({
       title,
       type,
       description,
       course,
-      file: cloudinaryResult.secure_url,
-      cloudinaryId: cloudinaryResult.public_id,
+      file: `/uploads/documents/${req.file.filename}`,
       status: "submitted",
       user: userId,
     });
@@ -168,18 +141,25 @@ exports.getUserDocuments = async (req, res) => {
 
 // Middleware to handle file upload
 exports.handleFileUpload = (req, res, next) => {
+  console.log("File upload request received");
+  console.log("Request body:", req.body);
+  console.log("Request file:", req.file);
+
   upload(req, res, function (err) {
     if (err instanceof multer.MulterError) {
+      console.error("Multer error:", err);
       return res.status(400).json({
         success: false,
         message: err.message,
       });
     } else if (err) {
+      console.error("File upload error:", err);
       return res.status(400).json({
         success: false,
         message: err.message,
       });
     }
+    console.log("File uploaded successfully:", req.file);
     next();
   });
 };
@@ -263,34 +243,13 @@ exports.updateDocument = async (req, res) => {
 
     // If a new file is uploaded
     if (req.file) {
-      try {
-        // Delete old file from Cloudinary if it exists
-        if (document.cloudinaryId) {
-          await cloudinary.uploader.destroy(document.cloudinaryId);
-        }
-
-        // Upload new file to Cloudinary
-        const cloudinaryResult = await cloudinary.uploader.upload(
-          req.file.path,
-          {
-            folder: "documents",
-            resource_type: "auto",
-          }
-        );
-
-        // Delete temporary file
-        fs.unlinkSync(req.file.path);
-
-        document.file = cloudinaryResult.secure_url;
-        document.cloudinaryId = cloudinaryResult.public_id;
-      } catch (uploadError) {
-        console.error("Cloudinary upload error:", uploadError);
-        // Delete temporary file even if upload fails
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        throw new Error("Failed to upload file to Cloudinary");
+      // Delete old file if it exists
+      const oldFilePath = path.join(__dirname, '..', document.file);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
       }
+
+      document.file = `/uploads/documents/${req.file.filename}`;
     }
 
     await document.save();
@@ -312,7 +271,6 @@ exports.updateDocument = async (req, res) => {
 // Delete a document
 exports.deleteDocument = async (req, res) => {
   try {
-    // Find the document and verify ownership
     const document = await Document.findOne({
       _id: req.params.id,
       user: req.user._id,
@@ -321,19 +279,14 @@ exports.deleteDocument = async (req, res) => {
     if (!document) {
       return res.status(404).json({
         success: false,
-        message:
-          "Document not found or you do not have permission to delete it",
+        message: "Document not found or you do not have permission to delete it",
       });
     }
 
-    // Delete from Cloudinary if document has a cloudinaryId
-    if (document.cloudinaryId) {
-      try {
-        await cloudinary.uploader.destroy(document.cloudinaryId);
-      } catch (cloudinaryError) {
-        console.error("Error deleting from Cloudinary:", cloudinaryError);
-        // Continue with document deletion even if Cloudinary deletion fails
-      }
+    // Delete the file from the filesystem
+    const filePath = path.join(__dirname, '..', document.file);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
     }
 
     // Delete the document from the database
@@ -515,34 +468,13 @@ exports.updateDraft = async (req, res) => {
 
     // If a new file is uploaded
     if (req.file) {
-      try {
-        // Delete old file from Cloudinary if it exists
-        if (document.cloudinaryId) {
-          await cloudinary.uploader.destroy(document.cloudinaryId);
-        }
-
-        // Upload new file to Cloudinary
-        const cloudinaryResult = await cloudinary.uploader.upload(
-          req.file.path,
-          {
-            folder: "documents",
-            resource_type: "auto",
-          }
-        );
-
-        // Delete temporary file
-        fs.unlinkSync(req.file.path);
-
-        document.file = cloudinaryResult.secure_url;
-        document.cloudinaryId = cloudinaryResult.public_id;
-      } catch (uploadError) {
-        console.error("Cloudinary upload error:", uploadError);
-        // Delete temporary file even if upload fails
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        throw new Error("Failed to upload file to Cloudinary");
+      // Delete old file if it exists
+      const oldFilePath = path.join(__dirname, '..', document.file);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
       }
+
+      document.file = `/uploads/documents/${req.file.filename}`;
     }
 
     await document.save();

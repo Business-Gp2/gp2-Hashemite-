@@ -10,9 +10,14 @@ axios.defaults.withCredentials = true;
 axios.defaults.headers.common["Content-Type"] = "application/json";
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const storedUser = Cookies.get("user");
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!Cookies.get("token");
+  });
 
   // Function to set auth token
   const setAuthToken = (token) => {
@@ -23,61 +28,97 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Initialize auth state
   useEffect(() => {
     const initializeAuth = async () => {
+      const token = Cookies.get("token");
+      
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      // Set the token in axios headers
+      setAuthToken(token);
+
       try {
-        const token = Cookies.get("token");
-        const storedUser = Cookies.get("user");
-
-        if (!token || !storedUser) {
-          setLoading(false);
-          return;
-        }
-
-        // Set the token in axios headers
-        setAuthToken(token);
-
-        try {
-          // Try to fetch fresh user data
-          const response = await axios.get("/api/auth/me");
-          if (response.data) {
-            setUser(response.data);
-            setIsAuthenticated(true);
-            // Update stored user data
-            Cookies.set("user", JSON.stringify(response.data), {
-              expires: 30,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "lax",
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          // If the error is not a 401/403, try to use stored data
-          if (
-            error.response?.status !== 401 &&
-            error.response?.status !== 403
-          ) {
-            try {
-              const parsedUser = JSON.parse(storedUser);
-              setUser(parsedUser);
-              setIsAuthenticated(true);
-            } catch (parseError) {
-              console.error("Error parsing stored user data:", parseError);
-              handleLogout();
-            }
-          } else {
-            handleLogout();
-          }
+        // Try to fetch fresh user data
+        const response = await axios.get("/api/auth/me");
+        if (response.data) {
+          setUser(response.data);
+          setIsAuthenticated(true);
+          // Update stored user data
+          Cookies.set("user", JSON.stringify(response.data), {
+            expires: 30,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+          });
         }
       } catch (error) {
-        console.error("Error in initializeAuth:", error);
-        handleLogout();
+        console.error("Error fetching user data:", error);
+        // If we have stored user data, use it
+        const storedUser = Cookies.get("user");
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+            setIsAuthenticated(true);
+          } catch (parseError) {
+            console.error("Error parsing stored user data:", parseError);
+            handleLogout();
+          }
+        } else {
+          handleLogout();
+        }
       } finally {
         setLoading(false);
       }
     };
 
     initializeAuth();
+  }, []);
+
+  // Add axios interceptor for handling token expiration
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401) {
+          const token = Cookies.get("token");
+          if (token) {
+            try {
+              // Try to refresh the token
+              const response = await axios.get("/api/auth/me", {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              
+              if (response.data) {
+                setUser(response.data);
+                setIsAuthenticated(true);
+                Cookies.set("user", JSON.stringify(response.data), {
+                  expires: 30,
+                  secure: process.env.NODE_ENV === "production",
+                  sameSite: "lax",
+                });
+                return axios(error.config);
+              }
+            } catch (refreshError) {
+              console.error("Token refresh failed:", refreshError);
+              handleLogout();
+            }
+          } else {
+            handleLogout();
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -135,20 +176,18 @@ export const AuthProvider = ({ children }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          withCredentials: true, // Enable sending cookies
+          withCredentials: true,
         });
       }
     } catch (error) {
       console.error("Error during logout:", error);
     } finally {
-      // Always clean up local state and cookies, even if the server request fails
       handleLogout();
     }
   };
 
   const updateUser = (newUserData) => {
     setUser(newUserData);
-    // Update stored user data with secure options
     Cookies.set("user", JSON.stringify(newUserData), {
       expires: 30,
       secure: process.env.NODE_ENV === "production",

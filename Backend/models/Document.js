@@ -24,12 +24,8 @@ const documentSchema = new mongoose.Schema({
     trim: true,
   },
   file: {
-    type: String, // This will store the Cloudinary URL
+    type: String, // This will store the file path
     required: true,
-  },
-  cloudinaryId: {
-    type: String, // This will store the Cloudinary public ID
-    required: false,
   },
   status: {
     type: String,

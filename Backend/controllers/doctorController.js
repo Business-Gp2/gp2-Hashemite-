@@ -362,11 +362,14 @@ exports.approveDocument = async (req, res) => {
 // Get all doctors (for student message dropdown)
 exports.getAllDoctors = async (req, res) => {
   try {
-    const doctors = await Doctor.find().populate("user", "firstName lastName");
+    // Find all users with role "doctor"
+    const doctors = await User.find({ role: "doctor" })
+      .select("_id firstName lastName");
+    
     const doctorList = doctors.map((doc) => ({
-      userId: doc.user._id,
-      firstName: doc.user.firstName,
-      lastName: doc.user.lastName,
+      userId: doc._id,
+      firstName: doc.firstName,
+      lastName: doc.lastName,
     }));
     res.status(200).json({ success: true, doctors: doctorList });
   } catch (error) {

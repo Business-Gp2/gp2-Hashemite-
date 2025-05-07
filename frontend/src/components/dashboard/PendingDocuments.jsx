@@ -10,22 +10,18 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  ExternalLink,
-  Search,
-  Filter,
   User,
   AlertCircle,
 } from "lucide-react";
 
 const API_URL = "http://localhost:5000";
 
-const DoctorPendingDocuments = () => {
+const PendingDocuments = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [error, setError] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -42,7 +38,7 @@ const DoctorPendingDocuments = () => {
       }
 
       const response = await axios.get(
-        `${API_URL}/api/doctor/pending-documents`,
+        `${API_URL}/api/documents/pending`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -55,20 +51,28 @@ const DoctorPendingDocuments = () => {
       }
     } catch (error) {
       console.error("Error fetching pending documents:", error);
-      if (error.response?.status === 401) {
-        navigate("/login");
-      }
+      setError("Failed to fetch pending documents");
       toast.error("Failed to fetch pending documents");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async (documentId) => {
+  const handleViewDocument = (document) => {
+    setSelectedDocument(document);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedDocument(null);
+  };
+
+  const handleApproveDocument = async (documentId) => {
     try {
       const token = Cookies.get("token");
       const response = await axios.put(
-        `${API_URL}/api/doctor/approve-document/${documentId}`,
+        `${API_URL}/api/documents/${documentId}/approve`,
         {},
         {
           headers: {
@@ -87,11 +91,11 @@ const DoctorPendingDocuments = () => {
     }
   };
 
-  const handleReject = async (documentId) => {
+  const handleRejectDocument = async (documentId) => {
     try {
       const token = Cookies.get("token");
       const response = await axios.put(
-        `${API_URL}/api/doctor/reject-document/${documentId}`,
+        `${API_URL}/api/documents/${documentId}/reject`,
         {},
         {
           headers: {
@@ -110,37 +114,27 @@ const DoctorPendingDocuments = () => {
     }
   };
 
-  const handleViewDocument = (document) => {
-    console.log("Viewing document:", document); // Debug log
-    setSelectedDocument(document);
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setSelectedDocument(null);
-  };
-
   const getFileUrl = (filePath) => {
     if (!filePath) return null;
     if (filePath.startsWith('http')) return filePath;
     return `${API_URL}${filePath}`;
   };
 
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.course.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (filter === "all") return matchesSearch;
-    return matchesSearch && doc.type === filter;
-  });
-
   if (loading) {
     return (
       <DoctorLayout>
         <div className="flex justify-center items-center h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      </DoctorLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DoctorLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-red-600">{error}</div>
         </div>
       </DoctorLayout>
     );
@@ -156,43 +150,7 @@ const DoctorPendingDocuments = () => {
           </p>
         </div>
 
-        {/* Search and Filters */}
-        <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="sm:col-span-1">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Search documents..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="sm:col-span-1">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Filter className="h-5 w-5 text-gray-400" />
-              </div>
-              <select
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              >
-                <option value="all">All Types</option>
-                <option value="assignment">Assignment</option>
-                <option value="project">Project</option>
-                <option value="report">Report</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {filteredDocuments.length === 0 ? (
+        {documents.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <svg
               className="w-12 h-12 mx-auto text-gray-400 mb-4"
@@ -216,7 +174,7 @@ const DoctorPendingDocuments = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredDocuments.map((doc) => (
+            {documents.map((doc) => (
               <div
                 key={doc._id}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
@@ -261,13 +219,13 @@ const DoctorPendingDocuments = () => {
                     View Document
                   </button>
                   <button
-                    onClick={() => handleApprove(doc._id)}
+                    onClick={() => handleApproveDocument(doc._id)}
                     className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >
                     Approve
                   </button>
                   <button
-                    onClick={() => handleReject(doc._id)}
+                    onClick={() => handleRejectDocument(doc._id)}
                     className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     Reject
@@ -461,4 +419,4 @@ const DoctorPendingDocuments = () => {
   );
 };
 
-export default DoctorPendingDocuments;
+export default PendingDocuments; 

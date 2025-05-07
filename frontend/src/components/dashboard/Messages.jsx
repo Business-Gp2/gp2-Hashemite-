@@ -148,7 +148,7 @@ const Messages = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800 flex items-center">
             <MessageCircle className="mr-2 text-blue-600" size={24} />
-            Medical Conversations
+            Conversations
           </h1>
           <button
             onClick={() => setShowNewMessageForm(!showNewMessageForm)}

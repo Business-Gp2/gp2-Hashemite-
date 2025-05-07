@@ -30,20 +30,39 @@ const UploadDocument = () => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
-      "application/pdf": [".pdf"],
-      "image/*": [".png", ".jpg", ".jpeg"],
+      'application/pdf': ['.pdf'],
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif']
     },
     maxSize: 5 * 1024 * 1024, // 5MB
     multiple: false,
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
-        setSelectedFile(acceptedFiles[0]);
-        setFormData((prev) => ({
-          ...prev,
-          file: acceptedFiles[0],
-        }));
+        const file = acceptedFiles[0];
+        console.log('File type:', file.type); // Debug log
+        // Validate file type
+        if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
+          setSelectedFile(file);
+          setFormData((prev) => ({
+            ...prev,
+            file: file,
+          }));
+          toast.success('File selected successfully');
+        } else {
+          toast.error('Only PDF and image files are allowed!');
+        }
       }
     },
+    onDropRejected: (rejectedFiles) => {
+      console.log('Rejected files:', rejectedFiles); // Debug log
+      const error = rejectedFiles[0].errors[0];
+      if (error.code === 'file-too-large') {
+        toast.error('File is too large. Maximum size is 5MB');
+      } else if (error.code === 'file-invalid-type') {
+        toast.error('Only PDF and image files are allowed!');
+      } else {
+        toast.error('Error uploading file: ' + error.message);
+      }
+    }
   });
 
   useEffect(() => {
@@ -128,6 +147,9 @@ const UploadDocument = () => {
         return;
       }
 
+      console.log("Selected file:", selectedFile);
+      console.log("Form data:", formData);
+
       const formDataToSend = new FormData();
       formDataToSend.append("title", formData.title);
       formDataToSend.append("type", formData.type);
@@ -135,6 +157,12 @@ const UploadDocument = () => {
       formDataToSend.append("course", formData.course);
       formDataToSend.append("file", selectedFile);
       formDataToSend.append("status", "draft");
+
+      console.log("Sending request to:", `${API_URL}/api/documents/draft`);
+      console.log("Request headers:", {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      });
 
       const response = await axios.post(
         `${API_URL}/api/documents/draft`,
@@ -147,10 +175,16 @@ const UploadDocument = () => {
         }
       );
 
-      toast.success("Draft saved successfully");
-      navigate("/draft-documents");
+      console.log("Response:", response.data);
+
+      if (response.data.success) {
+        toast.success("Document saved as draft successfully");
+        navigate("/dashboard/draft-document");
+      }
     } catch (error) {
       console.error("Error saving draft:", error);
+      console.error("Error response:", error.response?.data);
+      setError(error.response?.data?.message || "Failed to save draft");
       toast.error(error.response?.data?.message || "Failed to save draft");
     } finally {
       setSubmitting(false);
@@ -315,6 +349,14 @@ const UploadDocument = () => {
                       <p className="text-sm text-gray-500">
                         PDF, PNG, JPG, JPEG up to 5MB
                       </p>
+                      {selectedFile && (
+                        <div className="mt-2 text-sm text-gray-600">
+                          <p>Selected file: {selectedFile.name}</p>
+                          <p className="text-xs text-gray-500">
+                            Type: {selectedFile.type}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
