@@ -30,39 +30,42 @@ const UploadDocument = () => {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
-      'application/pdf': ['.pdf'],
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif']
+      "application/pdf": [".pdf"],
+      "image/*": [".png", ".jpg", ".jpeg", ".gif"],
     },
     maxSize: 5 * 1024 * 1024, // 5MB
     multiple: false,
+    noClick: false,
+    noKeyboard: true,
+    preventDropOnDocument: true,
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
-        console.log('File type:', file.type); // Debug log
+        console.log("File type:", file.type); // Debug log
         // Validate file type
-        if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
+        if (file.type === "application/pdf" || file.type.startsWith("image/")) {
           setSelectedFile(file);
           setFormData((prev) => ({
             ...prev,
             file: file,
           }));
-          toast.success('File selected successfully');
+          toast.success("File selected successfully");
         } else {
-          toast.error('Only PDF and image files are allowed!');
+          toast.error("Only PDF and image files are allowed!");
         }
       }
     },
     onDropRejected: (rejectedFiles) => {
-      console.log('Rejected files:', rejectedFiles); // Debug log
+      console.log("Rejected files:", rejectedFiles); // Debug log
       const error = rejectedFiles[0].errors[0];
-      if (error.code === 'file-too-large') {
-        toast.error('File is too large. Maximum size is 5MB');
-      } else if (error.code === 'file-invalid-type') {
-        toast.error('Only PDF and image files are allowed!');
+      if (error.code === "file-too-large") {
+        toast.error("File is too large. Maximum size is 5MB");
+      } else if (error.code === "file-invalid-type") {
+        toast.error("Only PDF and image files are allowed!");
       } else {
-        toast.error('Error uploading file: ' + error.message);
+        toast.error("Error uploading file: " + error.message);
       }
-    }
+    },
   });
 
   useEffect(() => {
@@ -90,7 +93,10 @@ const UploadDocument = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+
     setLoading(true);
+    setSubmitting(true);
     setError(null);
 
     try {
@@ -130,6 +136,7 @@ const UploadDocument = () => {
       toast.error(error.response?.data?.message || "Failed to upload document");
     } finally {
       setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -212,7 +219,7 @@ const UploadDocument = () => {
             </h2>
           </div>
 
-          <form className="px-8 py-10 space-y-8">
+          <form onSubmit={handleSubmit} className="px-8 py-10 space-y-8">
             <div className="grid grid-cols-1 gap-y-8 gap-x-6 sm:grid-cols-6">
               <div className="sm:col-span-6">
                 <label
@@ -316,43 +323,97 @@ const UploadDocument = () => {
                 <div className="mt-1">
                   <div
                     {...getRootProps()}
-                    className={`mt-1 flex justify-center px-8 pt-8 pb-8 border-2 border-dashed rounded-lg ${
+                    className={`mt-1 flex justify-center px-8 pt-8 pb-8 border-2 border-dashed rounded-lg transition-all duration-300 ${
                       isDragActive
                         ? "border-blue-500 bg-blue-50"
-                        : "border-gray-300"
+                        : selectedFile
+                        ? "border-green-500 bg-green-50"
+                        : "border-gray-300 hover:border-gray-400"
                     }`}
+                    onClick={(e) => {
+                      // Prevent event bubbling
+                      e.stopPropagation();
+                      getRootProps().onClick(e);
+                    }}
                   >
                     <div className="space-y-3 text-center">
-                      <svg
-                        className={`mx-auto h-16 w-16 ${
-                          isDragActive ? "text-blue-500" : "text-gray-400"
+                      {selectedFile ? (
+                        <div className="flex flex-col items-center">
+                          <svg
+                            className="h-16 w-16 text-green-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                          <span className="mt-2 text-sm text-green-600 font-medium">
+                            File uploaded successfully!
+                          </span>
+                        </div>
+                      ) : (
+                        <svg
+                          className={`mx-auto h-16 w-16 ${
+                            isDragActive ? "text-blue-500" : "text-gray-400"
+                          }`}
+                          stroke="currentColor"
+                          fill="none"
+                          viewBox="0 0 48 48"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                      <div
+                        className={`flex text-base ${
+                          selectedFile ? "text-green-600" : "text-gray-600"
                         }`}
-                        stroke="currentColor"
-                        fill="none"
-                        viewBox="0 0 48 48"
-                        aria-hidden="true"
                       >
-                        <path
-                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      <div className="flex text-base text-gray-600">
-                        <label className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                          <span>Upload a file</span>
-                          <input {...getInputProps()} />
+                        <label
+                          className={`relative cursor-pointer rounded-md font-medium focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 ${
+                            selectedFile
+                              ? "text-green-600 hover:text-green-500"
+                              : "text-blue-600 hover:text-blue-500"
+                          }`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span>
+                            {selectedFile ? "Change file" : "Upload a file"}
+                          </span>
+                          <input
+                            {...getInputProps()}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </label>
-                        <p className="pl-1">or drag and drop</p>
+                        <p className="pl-1">
+                          {selectedFile
+                            ? "or drag and drop a new one"
+                            : "or drag and drop"}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-500">
+                      <p
+                        className={`text-sm ${
+                          selectedFile ? "text-green-500" : "text-gray-500"
+                        }`}
+                      >
                         PDF, PNG, JPG, JPEG up to 5MB
                       </p>
                       {selectedFile && (
-                        <div className="mt-2 text-sm text-gray-600">
-                          <p>Selected file: {selectedFile.name}</p>
-                          <p className="text-xs text-gray-500">
+                        <div className="mt-4 p-4 bg-green-100 rounded-lg">
+                          <p className="text-sm font-medium text-green-800">
+                            Selected file: {selectedFile.name}
+                          </p>
+                          <p className="text-xs text-green-600 mt-1">
                             Type: {selectedFile.type}
                           </p>
                         </div>
@@ -374,7 +435,6 @@ const UploadDocument = () => {
               </button>
               <button
                 type="submit"
-                onClick={handleSubmit}
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 disabled={submitting}
               >

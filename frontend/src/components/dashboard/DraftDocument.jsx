@@ -4,6 +4,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
+import Swal from "sweetalert2";
 
 const API_URL = "http://localhost:5000";
 
@@ -62,8 +63,20 @@ const DraftDocument = () => {
     navigate("/dashboard/upload-document", { state: { document } });
   };
 
-  const handleDelete = async (documentId) => {
-    if (window.confirm("Are you sure you want to delete this draft?")) {
+  const handleDelete = async (documentId, documentTitle) => {
+    const result = await Swal.fire({
+      title: "Delete Draft?",
+      html: `Are you sure you want to delete <strong>${documentTitle}</strong>?<br/><br/>This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#EF4444",
+      cancelButtonColor: "#6B7280",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
+
+    if (result.isConfirmed) {
       try {
         const token = Cookies.get("token");
         if (!token) {
@@ -81,42 +94,82 @@ const DraftDocument = () => {
         );
 
         if (response.data.success) {
-          toast.success("Draft deleted successfully");
+          Swal.fire({
+            title: "Deleted!",
+            text: "The draft has been deleted.",
+            icon: "success",
+            confirmButtonColor: "#10B981",
+          });
           setDrafts(drafts.filter((doc) => doc._id !== documentId));
         } else {
-          toast.error(response.data.message || "Failed to delete draft");
+          Swal.fire({
+            title: "Error!",
+            text: response.data.message || "Failed to delete draft",
+            icon: "error",
+            confirmButtonColor: "#EF4444",
+          });
         }
       } catch (error) {
         console.error("Error deleting draft:", error);
-        const errorMessage =
-          error.response?.data?.message || "Failed to delete draft";
-        toast.error(errorMessage);
+        Swal.fire({
+          title: "Error!",
+          text: error.response?.data?.message || "Failed to delete draft",
+          icon: "error",
+          confirmButtonColor: "#EF4444",
+        });
       }
     }
   };
 
-  const handleSubmit = async (documentId) => {
-    try {
-      const token = Cookies.get("token");
-      if (!token) {
-        navigate("/login");
-        return;
-      }
+  const handleSubmit = async (documentId, documentTitle) => {
+    const result = await Swal.fire({
+      title: "Submit Document?",
+      html: `Are you sure you want to submit <strong>${documentTitle}</strong>?<br/><br/>After submission, you won't be able to edit this document.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10B981",
+      cancelButtonColor: "#6B7280",
+      confirmButtonText: "Yes, submit it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
 
-      await axios.put(
-        `${API_URL}/api/documents/submit/${documentId}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+    if (result.isConfirmed) {
+      try {
+        const token = Cookies.get("token");
+        if (!token) {
+          navigate("/login");
+          return;
         }
-      );
-      toast.success("Document submitted successfully");
-      fetchDrafts();
-    } catch (error) {
-      console.error("Error submitting draft:", error);
-      toast.error("Failed to submit document");
+
+        const response = await axios.put(
+          `${API_URL}/api/documents/submit/${documentId}`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.data.success) {
+          Swal.fire({
+            title: "Submitted!",
+            text: "Your document has been submitted successfully.",
+            icon: "success",
+            confirmButtonColor: "#10B981",
+          });
+          fetchDrafts();
+        }
+      } catch (error) {
+        console.error("Error submitting draft:", error);
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to submit document. Please try again.",
+          icon: "error",
+          confirmButtonColor: "#EF4444",
+        });
+      }
     }
   };
 
@@ -330,13 +383,13 @@ const DraftDocument = () => {
                   )}
                   {renderActionButton(
                     "Delete",
-                    () => handleDelete(doc._id),
+                    () => handleDelete(doc._id, doc.title),
                     "text-red-700 hover:bg-red-50",
                     "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                   )}
                   {renderActionButton(
                     "Submit",
-                    () => handleSubmit(doc._id),
+                    () => handleSubmit(doc._id, doc.title),
                     "text-purple-700 hover:bg-purple-50",
                     "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   )}
@@ -469,7 +522,12 @@ const DraftDocument = () => {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleSubmit(selectedDocument._id)}
+                      onClick={() =>
+                        handleSubmit(
+                          selectedDocument._id,
+                          selectedDocument.title
+                        )
+                      }
                       className="flex-1 flex justify-center items-center px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition-colors shadow-sm"
                     >
                       <svg
@@ -496,15 +554,19 @@ const DraftDocument = () => {
                   {selectedDocument.file ? (
                     <div className="flex flex-col items-center justify-center h-full space-y-4">
                       <div className="text-center">
-                        {selectedDocument.file.toLowerCase().endsWith('.pdf') ? (
+                        {selectedDocument.file
+                          .toLowerCase()
+                          .endsWith(".pdf") ? (
                           <div className="w-full h-[600px]">
                             <iframe
                               src={`${API_URL}${selectedDocument.file}`}
                               className="w-full h-full border-0"
                               title="PDF Preview"
                               onError={(e) => {
-                                console.error('Error loading PDF:', e);
-                                toast.error('Error loading PDF preview. Please try downloading the file instead.');
+                                console.error("Error loading PDF:", e);
+                                toast.error(
+                                  "Error loading PDF preview. Please try downloading the file instead."
+                                );
                               }}
                             />
                           </div>
@@ -514,8 +576,8 @@ const DraftDocument = () => {
                             alt={selectedDocument.title}
                             className="max-w-full max-h-[600px] object-contain"
                             onError={(e) => {
-                              console.error('Error loading image:', e);
-                              toast.error('Error loading image preview');
+                              console.error("Error loading image:", e);
+                              toast.error("Error loading image preview");
                             }}
                           />
                         )}
@@ -523,7 +585,7 @@ const DraftDocument = () => {
                           {selectedDocument.title}
                         </h3>
                         <p className="text-sm text-gray-500 mb-4">
-                          {selectedDocument.file.toLowerCase().endsWith('.pdf')
+                          {selectedDocument.file.toLowerCase().endsWith(".pdf")
                             ? "PDF Document"
                             : "Image File"}
                         </p>

@@ -67,7 +67,6 @@ const DoctorDashboard = () => {
         if (error.response?.status === 401) {
           navigate("/login");
         }
-        
       } finally {
         setLoading(false);
       }
@@ -161,7 +160,7 @@ const DoctorDashboard = () => {
   const getFileUrl = (filePath) => {
     if (!filePath) return null;
     // If the path already starts with http, return as is
-    if (filePath.startsWith('http')) return filePath;
+    if (filePath.startsWith("http")) return filePath;
     // Otherwise, prepend the API_URL
     return `${API_URL}${filePath}`;
   };
@@ -170,14 +169,11 @@ const DoctorDashboard = () => {
     try {
       setLoadingPending(true);
       const token = Cookies.get("token");
-      const response = await axios.get(
-        `${API_URL}/api/documents/pending`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await axios.get(`${API_URL}/api/documents/pending`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (response.data.success) {
         setPendingDocuments(response.data.documents);
@@ -303,8 +299,9 @@ const DoctorDashboard = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Review Documents */}
-            <button
-              onClick={handleViewPendingDocuments}
+            <Link
+              key="my-courses"
+              to="/doctor/pending-documents"
               className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow group"
             >
               <div className="flex flex-col items-center text-center">
@@ -315,7 +312,7 @@ const DoctorDashboard = () => {
                   Review Documents
                 </h3>
               </div>
-            </button>
+            </Link>
 
             {/* My Courses */}
             <Link
@@ -527,16 +524,28 @@ const DoctorDashboard = () => {
                     <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                       <div className="space-y-3">
                         <div>
-                          <p className="text-sm font-medium text-gray-500">Title</p>
-                          <p className="text-gray-900">{selectedDocument.title}</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            Title
+                          </p>
+                          <p className="text-gray-900">
+                            {selectedDocument.title}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-500">Type</p>
-                          <p className="text-gray-900">{selectedDocument.type}</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            Type
+                          </p>
+                          <p className="text-gray-900">
+                            {selectedDocument.type}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-500">Course</p>
-                          <p className="text-gray-900">{selectedDocument.course}</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            Course
+                          </p>
+                          <p className="text-gray-900">
+                            {selectedDocument.course}
+                          </p>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-500">
@@ -547,7 +556,9 @@ const DoctorDashboard = () => {
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-500">Status</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            Status
+                          </p>
                           <span
                             className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${getStatusColor(
                               selectedDocument.status
@@ -566,15 +577,17 @@ const DoctorDashboard = () => {
                   {selectedDocument.file ? (
                     <div className="flex flex-col items-center justify-center h-full space-y-4">
                       <div className="text-center">
-                        {selectedDocument.file.toLowerCase().endsWith('.pdf') ? (
+                        {selectedDocument.file
+                          .toLowerCase()
+                          .endsWith(".pdf") ? (
                           <div className="w-full h-[600px]">
                             <iframe
                               src={getFileUrl(selectedDocument.file)}
                               className="w-full h-full border-0"
                               title="PDF Preview"
                               onError={(e) => {
-                                console.error('Error loading PDF:', e);
-                                toast.error('Error loading PDF preview');
+                                console.error("Error loading PDF:", e);
+                                toast.error("Error loading PDF preview");
                               }}
                             />
                           </div>
@@ -584,8 +597,8 @@ const DoctorDashboard = () => {
                             alt={selectedDocument.title}
                             className="max-w-full max-h-[600px] object-contain"
                             onError={(e) => {
-                              console.error('Error loading image:', e);
-                              toast.error('Error loading image preview');
+                              console.error("Error loading image:", e);
+                              toast.error("Error loading image preview");
                             }}
                           />
                         )}
@@ -655,7 +668,9 @@ const DoctorDashboard = () => {
                           d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
                       </svg>
-                      <p className="text-gray-600 mb-2">No document file available</p>
+                      <p className="text-gray-600 mb-2">
+                        No document file available
+                      </p>
                     </div>
                   )}
                 </div>

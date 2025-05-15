@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 import DoctorLayout from "./DoctorLayout";
+import Swal from "sweetalert2";
 import {
   FileText,
   Clock,
@@ -64,49 +65,97 @@ const DoctorPendingDocuments = () => {
     }
   };
 
-  const handleApprove = async (documentId) => {
-    try {
-      const token = Cookies.get("token");
-      const response = await axios.put(
-        `${API_URL}/api/doctor/approve-document/${documentId}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+  const handleApprove = async (documentId, documentTitle) => {
+    const result = await Swal.fire({
+      title: "Approve Document?",
+      html: `Are you sure you want to approve <strong>${documentTitle}</strong>?<br/><br/>This action cannot be undone.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10B981",
+      cancelButtonColor: "#6B7280",
+      confirmButtonText: "Yes, approve it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
 
-      if (response.data.success) {
-        toast.success("Document approved successfully");
-        fetchPendingDocuments(); // Refresh the list
+    if (result.isConfirmed) {
+      try {
+        const token = Cookies.get("token");
+        const response = await axios.put(
+          `${API_URL}/api/doctor/approve-document/${documentId}`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.data.success) {
+          Swal.fire({
+            title: "Approved!",
+            text: "The document has been approved.",
+            icon: "success",
+            confirmButtonColor: "#10B981",
+          });
+          fetchPendingDocuments(); // Refresh the list
+        }
+      } catch (error) {
+        console.error("Error approving document:", error);
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to approve document. Please try again.",
+          icon: "error",
+          confirmButtonColor: "#EF4444",
+        });
       }
-    } catch (error) {
-      console.error("Error approving document:", error);
-      toast.error("Failed to approve document");
     }
   };
 
-  const handleReject = async (documentId) => {
-    try {
-      const token = Cookies.get("token");
-      const response = await axios.put(
-        `${API_URL}/api/doctor/reject-document/${documentId}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+  const handleReject = async (documentId, documentTitle) => {
+    const result = await Swal.fire({
+      title: "Reject Document?",
+      html: `Are you sure you want to reject <strong>${documentTitle}</strong>?<br/><br/>This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#EF4444",
+      cancelButtonColor: "#6B7280",
+      confirmButtonText: "Yes, reject it!",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+    });
 
-      if (response.data.success) {
-        toast.success("Document rejected successfully");
-        fetchPendingDocuments(); // Refresh the list
+    if (result.isConfirmed) {
+      try {
+        const token = Cookies.get("token");
+        const response = await axios.put(
+          `${API_URL}/api/doctor/reject-document/${documentId}`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.data.success) {
+          Swal.fire({
+            title: "Rejected!",
+            text: "The document has been rejected.",
+            icon: "success",
+            confirmButtonColor: "#10B981",
+          });
+          fetchPendingDocuments(); // Refresh the list
+        }
+      } catch (error) {
+        console.error("Error rejecting document:", error);
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to reject document. Please try again.",
+          icon: "error",
+          confirmButtonColor: "#EF4444",
+        });
       }
-    } catch (error) {
-      console.error("Error rejecting document:", error);
-      toast.error("Failed to reject document");
     }
   };
 
@@ -123,15 +172,16 @@ const DoctorPendingDocuments = () => {
 
   const getFileUrl = (filePath) => {
     if (!filePath) return null;
-    if (filePath.startsWith('http')) return filePath;
+    if (filePath.startsWith("http")) return filePath;
     return `${API_URL}${filePath}`;
   };
 
   const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch =
+      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.course.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     if (filter === "all") return matchesSearch;
     return matchesSearch && doc.type === filter;
   });
@@ -150,7 +200,9 @@ const DoctorPendingDocuments = () => {
     <DoctorLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Pending Documents</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Pending Documents
+          </h1>
           <p className="mt-2 text-gray-600">
             Review and manage pending document submissions
           </p>
@@ -247,9 +299,7 @@ const DoctorPendingDocuments = () => {
                   </div>
                   <div className="flex items-center text-gray-600">
                     <Clock className="w-5 h-5 mr-2" />
-                    <span>
-                      {new Date(doc.createdAt).toLocaleDateString()}
-                    </span>
+                    <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
 
@@ -261,15 +311,17 @@ const DoctorPendingDocuments = () => {
                     View Document
                   </button>
                   <button
-                    onClick={() => handleApprove(doc._id)}
+                    onClick={() => handleApprove(doc._id, doc.title)}
                     className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >
+                    <CheckCircle className="w-4 h-4 mr-2" />
                     Approve
                   </button>
                   <button
-                    onClick={() => handleReject(doc._id)}
+                    onClick={() => handleReject(doc._id, doc.title)}
                     className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
+                    <XCircle className="w-4 h-4 mr-2" />
                     Reject
                   </button>
                 </div>
@@ -290,7 +342,9 @@ const DoctorPendingDocuments = () => {
                   <p className="text-gray-600 text-sm">
                     {selectedDocument.course} • {selectedDocument.type} •
                     <span className="ml-1">
-                      {new Date(selectedDocument.createdAt).toLocaleDateString()}
+                      {new Date(
+                        selectedDocument.createdAt
+                      ).toLocaleDateString()}
                     </span>
                   </p>
                 </div>
@@ -323,16 +377,28 @@ const DoctorPendingDocuments = () => {
                       <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                         <div className="space-y-3">
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Title</p>
-                            <p className="text-gray-900">{selectedDocument.title}</p>
+                            <p className="text-sm font-medium text-gray-500">
+                              Title
+                            </p>
+                            <p className="text-gray-900">
+                              {selectedDocument.title}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Type</p>
-                            <p className="text-gray-900">{selectedDocument.type}</p>
+                            <p className="text-sm font-medium text-gray-500">
+                              Type
+                            </p>
+                            <p className="text-gray-900">
+                              {selectedDocument.type}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Course</p>
-                            <p className="text-gray-900">{selectedDocument.course}</p>
+                            <p className="text-sm font-medium text-gray-500">
+                              Course
+                            </p>
+                            <p className="text-gray-900">
+                              {selectedDocument.course}
+                            </p>
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-500">
@@ -343,7 +409,9 @@ const DoctorPendingDocuments = () => {
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-gray-500">Status</p>
+                            <p className="text-sm font-medium text-gray-500">
+                              Status
+                            </p>
                             <span className="inline-block px-2 py-1 text-xs rounded-full font-medium text-blue-600 bg-blue-100">
                               Pending
                             </span>
@@ -358,15 +426,17 @@ const DoctorPendingDocuments = () => {
                     {selectedDocument.file ? (
                       <div className="flex flex-col items-center justify-center h-full space-y-4">
                         <div className="text-center">
-                          {selectedDocument.file.toLowerCase().endsWith('.pdf') ? (
+                          {selectedDocument.file
+                            .toLowerCase()
+                            .endsWith(".pdf") ? (
                             <div className="w-full h-[600px]">
                               <iframe
                                 src={getFileUrl(selectedDocument.file)}
                                 className="w-full h-full border-0"
                                 title="PDF Preview"
                                 onError={(e) => {
-                                  console.error('Error loading PDF:', e);
-                                  toast.error('Error loading PDF preview');
+                                  console.error("Error loading PDF:", e);
+                                  toast.error("Error loading PDF preview");
                                 }}
                               />
                             </div>
@@ -376,8 +446,8 @@ const DoctorPendingDocuments = () => {
                               alt={selectedDocument.title}
                               className="max-w-full max-h-[600px] object-contain"
                               onError={(e) => {
-                                console.error('Error loading image:', e);
-                                toast.error('Error loading image preview');
+                                console.error("Error loading image:", e);
+                                toast.error("Error loading image preview");
                               }}
                             />
                           )}
@@ -447,7 +517,9 @@ const DoctorPendingDocuments = () => {
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
-                        <p className="text-gray-600 mb-2">No document file available</p>
+                        <p className="text-gray-600 mb-2">
+                          No document file available
+                        </p>
                       </div>
                     )}
                   </div>

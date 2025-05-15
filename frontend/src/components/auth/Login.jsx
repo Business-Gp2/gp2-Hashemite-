@@ -33,7 +33,7 @@ const Login = () => {
 
     try {
       const userData = await login(formData.userId, formData.password);
-      
+
       if (userData) {
         toast.success("Login successful!");
         // Redirect based on user role
@@ -302,9 +302,15 @@ const Login = () => {
                   Remember me
                 </label>
               </div>
-              <div className="text-indigo-600 hover:text-indigo-500 cursor-pointer">
-                Forgot password?
-              </div>
+              <a
+                href="https://reg1.hu.edu.jo/password4get.aspx"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <div className="text-indigo-600 hover:text-indigo-500 cursor-pointer">
+                  Forgot password?
+                </div>
+              </a>
             </div>
 
             <div>
