@@ -83,6 +83,11 @@ const UploadDocument = () => {
     }
   }, [location.state]);
 
+
+
+
+
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -197,6 +202,7 @@ const UploadDocument = () => {
       setSubmitting(false);
     }
   };
+
 
   return (
     <div className="bg-white min-h-screen py-12 px-4 sm:px-6 lg:px-8">

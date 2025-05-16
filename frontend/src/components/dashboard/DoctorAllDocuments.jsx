@@ -125,8 +125,9 @@ const DoctorAllDocuments = () => {
 
     const matchesType = filter === "all" || doc.type === filter;
     const matchesStatus = statusFilter === "all" || doc.status === statusFilter;
+    const isNotDraft = doc.status !== "draft";
 
-    return matchesSearch && matchesType && matchesStatus;
+    return matchesSearch && matchesType && matchesStatus && isNotDraft;
   });
 
   if (loading) {
@@ -221,10 +222,9 @@ const DoctorAllDocuments = () => {
                       </p>
                       <div className="mt-3 flex items-center text-sm text-gray-500 space-x-4">
                         <div className="flex items-center">
-                          <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                          <span>
-                            Submitted{" "}
-                            {new Date(doc.submittedAt).toLocaleDateString()}
+                          <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-indigo-500" />
+                          <span className="text-indigo-600 font-medium">
+                            Date: {new Date(doc.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                         <div className="flex items-center">
@@ -254,14 +254,14 @@ const DoctorAllDocuments = () => {
                         <>
                           <button
                             onClick={() => handleApprove(doc._id)}
-                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
                           >
                             <CheckCircle className="w-4 h-4 mr-2" />
                             Approve
                           </button>
                           <button
                             onClick={() => handleReject(doc._id)}
-                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500"
                           >
                             <XCircle className="w-4 h-4 mr-2" />
                             Reject
