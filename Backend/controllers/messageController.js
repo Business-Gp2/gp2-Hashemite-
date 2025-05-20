@@ -12,18 +12,34 @@ exports.sendMessage = async (req, res) => {
         message: "Recipient and content are required.",
       });
     }
-    // Validate recipient exists and is a doctor
+    // Validate recipient exists
     const recipient = await User.findById(to);
     if (!recipient) {
       return res
         .status(404)
         .json({ success: false, message: "Recipient user not found." });
     }
-    if (recipient.role !== "doctor") {
+
+    // Get sender's role
+    const sender = await User.findById(from);
+    if (!sender) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Sender user not found." });
+    }
+
+    // Validate that the message is between a doctor and a student
+    if (sender.role === "doctor" && recipient.role !== "student") {
       return res
         .status(400)
-        .json({ success: false, message: "Recipient is not a doctor." });
+        .json({ success: false, message: "Doctors can only message students." });
     }
+    if (sender.role === "student" && recipient.role !== "doctor") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Students can only message doctors." });
+    }
+
     const message = await Message.create({ from, to, content });
     res.status(201).json({ success: true, message });
   } catch (error) {
